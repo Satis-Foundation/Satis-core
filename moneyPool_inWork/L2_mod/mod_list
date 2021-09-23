@@ -1,0 +1,7 @@
+Use @openzeppelin v.3.4 for OVM Solc v.0.7.6 compiler
+
+Delete all "address(this).balance" --> which will cause failure
+(just modify the files according to error output in hardhat OVM compiler, I only remember Address.sol but there could be more)
+
+!!! I disabled all ETH related function in the smart contract !!!
+!!! If WETH (the ERC20 token used as if ETH in OVM) transfer fails, you can try uncommenting the ETH related functions (EXCLUDING address(this).balance) !!!
