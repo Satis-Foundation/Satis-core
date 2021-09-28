@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.7.6;
+pragma solidity ^0.8.0;
 
-import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import '@openzeppelin/contracts/math/SafeMath.sol';
+import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/utils/SafeERC20.sol';
+import 'https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol';
+
 
 contract moniesPull {
 
@@ -11,14 +12,14 @@ contract moniesPull {
     using SafeMath for uint256;
 
     mapping (address => mapping (address => uint256)) clientERC20Balance;
-    //mapping (address => uint256) clientETHBalance;
+    mapping (address => uint256) clientETHBalance;
     mapping (address => mapping (address => uint256)) clientERC20Lock;
-    //apping (address => uint256) clientETHLock;
+    mapping (address => uint256) clientETHLock;
 
     address public adminAddress;
 
 
-    //event ethTransferLog (address sendAddress, address receiveAddress, string transactionData, string assetType, uint transactionValue);
+    event ethTransferLog (address sendAddress, address receiveAddress, string transactionData, string assetType, uint transactionValue);
     event erc20TransferLog (address sendAddress, address receiveAddress, string transactionData, string assetType, address erc20Address, uint transactionValue);
 
 
@@ -27,15 +28,12 @@ contract moniesPull {
         adminAddress = msg.sender;
     }
 
-    /*
     function getBalance() public view returns (uint) {
         return address(this).balance;
     }
-    */
     
     
     
-    /*
     //
     // !!! Should we include lock and unlock change in deposit?
     //
@@ -53,16 +51,10 @@ contract moniesPull {
         emit ethTransferLog(address(this), msg.sender, 'Assets withdrew', 'ETH', withdrawValue);
     }
     
-    function ethLock (uint256 newLockValue) external {
-        // input new lock value to overwrite
-        clientETHLock[msg.sender] = newLockValue;
-    }
-    
     function adminETHLock (address clientAddress, uint newLockValue) public {
         require (msg.sender == adminAddress, "Error: Not an Admin");
         clientETHLock[clientAddress] = newLockValue;
     }
-    */
 
 
 
@@ -81,11 +73,6 @@ contract moniesPull {
         emit erc20TransferLog(address(this), msg.sender, 'Assets withdrew', 'ERC20', tokenAddress, tokenValue);
     }
 
-    function erc20Lock (address tokenAddress, uint256 newLockValue) external {
-        // input new lock value to overwrite
-        clientERC20Lock[msg.sender][tokenAddress] = newLockValue;
-    }
-    
     function adminErc20Lock (address clientAddress, address tokenAddress, uint256 newLockValue) public {
         require (msg.sender == adminAddress, "Error: Not an Admin");
         clientERC20Lock[clientAddress][tokenAddress] = newLockValue;
