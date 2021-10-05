@@ -51,9 +51,14 @@ contract moniesPull {
         emit ethTransferLog(address(this), msg.sender, 'Assets withdrew', 'ETH', withdrawValue);
     }
     
-    function adminETHLock (address clientAddress, uint newLockValue) public {
+    function clientETHAddLock (address clientAddress, uint addLockValue) public {
+        require (msg.sender == clientAddress, "Error: Incorrect client address");
+        clientETHLock[clientAddress] = clientETHLock[clientAddress].add(addLockValue);
+    }
+
+    function adminETHUnlock (address clientAddress, uint unlockValue) public {
         require (msg.sender == adminAddress, "Error: Not an Admin");
-        clientETHLock[clientAddress] = newLockValue;
+        clientETHLock[clientAddress] = clientETHLock[clientAddress].sub(unlockValue);
     }
 
 
@@ -73,9 +78,14 @@ contract moniesPull {
         emit erc20TransferLog(address(this), msg.sender, 'Assets withdrew', 'ERC20', tokenAddress, tokenValue);
     }
 
-    function adminErc20Lock (address clientAddress, address tokenAddress, uint256 newLockValue) public {
+    function clientErc20AddLock (address clientAddress, address tokenAddress, uint256 addLockValue) public {
+        require (msg.sender == clientAddress, "Error: Incorrect client address");
+        clientERC20Lock[clientAddress][tokenAddress] = clientERC20Lock[clientAddress][tokenAddress].add(addLockValue);
+    }
+
+    function adminErc20Unlock (address clientAddress, address tokenAddress, uint256 unlockValue) public {
         require (msg.sender == adminAddress, "Error: Not an Admin");
-        clientERC20Lock[clientAddress][tokenAddress] = newLockValue;
+        clientERC20Lock[clientAddress][tokenAddress] = clientERC20Lock[clientAddress][tokenAddress].sub(unlockValue);
     }
     
     

@@ -11,59 +11,15 @@ contract moniesPull {
     using SafeMath for uint256;
 
     mapping (address => mapping (address => uint256)) clientERC20Balance;
-    //mapping (address => uint256) clientETHBalance;
     mapping (address => mapping (address => uint256)) clientERC20Lock;
-    //apping (address => uint256) clientETHLock;
-
     address public adminAddress;
 
 
-    //event ethTransferLog (address sendAddress, address receiveAddress, string transactionData, string assetType, uint transactionValue);
     event erc20TransferLog (address sendAddress, address receiveAddress, string transactionData, string assetType, address erc20Address, uint transactionValue);
 
-
-    
     constructor() {
         adminAddress = msg.sender;
     }
-
-    /*
-    function getBalance() public view returns (uint) {
-        return address(this).balance;
-    }
-    */
-    
-    
-    
-    /*
-    //
-    // !!! Should we include lock and unlock change in deposit?
-    //
-    function ethDeposit (string memory data) payable external {
-        clientETHBalance[msg.sender] = clientETHBalance[msg.sender].add(msg.value);
-        //clientETHLock[msg.sender] = newLockValue;
-        emit ethTransferLog(msg.sender, address(this), data, 'ETH', msg.value);
-    }
-
-    function ethWithdrawal (uint256 withdrawValue) external {
-        require (withdrawValue <= clientETHBalance[msg.sender].sub(clientETHLock[msg.sender]), "Not enough mobile assets");
-        address payable transferAddress = payable(msg.sender);
-        transferAddress.transfer(withdrawValue);
-        clientETHBalance[msg.sender] = clientETHBalance[msg.sender].sub(withdrawValue);
-        emit ethTransferLog(address(this), msg.sender, 'Assets withdrew', 'ETH', withdrawValue);
-    }
-    
-    function ethLock (uint256 newLockValue) external {
-        // input new lock value to overwrite
-        clientETHLock[msg.sender] = newLockValue;
-    }
-    
-    function adminETHLock (address clientAddress, uint newLockValue) public {
-        require (msg.sender == adminAddress, "Error: Not an Admin");
-        clientETHLock[clientAddress] = newLockValue;
-    }
-    */
-
 
 
     function erc20Deposit (address tokenAddress, uint256 tokenValue, string memory data) external {
@@ -81,17 +37,13 @@ contract moniesPull {
         emit erc20TransferLog(address(this), msg.sender, 'Assets withdrew', 'ERC20', tokenAddress, tokenValue);
     }
 
-    function adminErc20Lock (address clientAddress, address tokenAddress, uint256 newLockValue) public {
+    function clientErc20AddLock (address clientAddress, address tokenAddress, uint256 addLockValue) public {
+        require (msg.sender == clientAddress, "Error: Incorrect client address");
+        clientERC20Lock[clientAddress][tokenAddress] = clientERC20Lock[clientAddress][tokenAddress].add(addLockValue);
+    }
+
+    function adminErc20Unlock (address clientAddress, address tokenAddress, uint256 unlockValue) public {
         require (msg.sender == adminAddress, "Error: Not an Admin");
-        clientERC20Lock[clientAddress][tokenAddress] = newLockValue;
+        clientERC20Lock[clientAddress][tokenAddress] = clientERC20Lock[clientAddress][tokenAddress].sub(unlockValue);
     }
-    
-    
-    
-    /*
-    Should we provide a function for the owner to add other admins?
-    function addAdmin (address newAdminAddress) public {
-        
-    }
-    */
 }
