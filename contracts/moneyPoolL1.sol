@@ -578,16 +578,11 @@ contract moneyPoolL2 {
         _;
     }
 
-    modifier enoughMobileBalance(address _clientAddress, address _tokenAddress, uint256 _tokenValue) {
+    modifier enoughMobileBalance(address _tokenAddress, uint256 _tokenValue) {
         require (
             _tokenValue <= clientBalance[msg.sender][_tokenAddress].sub(clientLockBalance[msg.sender][_tokenAddress]),
             "Not enough mobile assets"
         );
-        _;
-    }
-
-    modifier enoughFreeAssets(uint256 _unlockValue, uint256 _withdrawValue) {
-        require (_unlockValue >= _withdrawValue, 'Insufficient free value');
         _;
     }
 
@@ -624,7 +619,7 @@ contract moneyPoolL2 {
     /**
      * @dev Locks fund within this contract to support trading positoins with optional trading instructions.
      */
-    function lockFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data) public enoughMobileBalance(msg.sender, _tokenAddress, _tokenValue) {
+    function lockFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data) public enoughMobileBalance(_tokenAddress, _tokenValue) {
         clientLockBalance[msg.sender][_tokenAddress] = clientLockBalance[msg.sender][_tokenAddress].add(_tokenValue);
         emit Lock(msg.sender, _tokenAddress, _tokenValue, _data);
     }
@@ -754,7 +749,7 @@ contract moneyPoolL2 {
     /**
      * @dev Remove fund from this contract.
      */
-    function removeFund(address _tokenAddress, uint256 _tokenValue) external enoughMobileBalance(msg.sender, _tokenAddress, _tokenValue) {
+    function removeFund(address _tokenAddress, uint256 _tokenValue) external enoughMobileBalance(_tokenAddress, _tokenValue) {
         IERC20 withdrawToken = IERC20(_tokenAddress);
         withdrawToken.safeTransfer(msg.sender, _tokenValue);
         clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].sub(_tokenValue);
