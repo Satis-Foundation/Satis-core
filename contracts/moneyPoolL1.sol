@@ -568,10 +568,11 @@ contract moneyPoolL2 {
      * Events that will be triggered when assets are deposited.
      * The log files will record the sender, recipient and transaction data.
      */
-    event TransferIn(address sendAddress, address tokenAddress, uint transactionValue);
-    event TransferOut(address sendAddress, address tokenAddress, uint transactionValue);
-    event Lock(address sendAddress, address tokenAddress, uint transactionValue, string transactionData);
-    event Unlock(address sendAddress, address tokenAddress, uint transactionValue);
+    event TransferIn(address clientAddress, address tokenAddress, uint transactionValue);
+    event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
+    event Lock(address clientAddress, address tokenAddress, uint transactionValue, string transactionData);
+    event Unlock(address clientAddress, address tokenAddress, uint transactionValue);
+    event OwnerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
@@ -762,6 +763,17 @@ contract moneyPoolL2 {
     function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isOwner {
         clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
         emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
+    }
+
+    /**
+     * @dev Owner taking locked fund.
+     */
+    function ownerTakeLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isOwner {
+        IERC20 takeToken = IERC20(_tokenAddress);
+        clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
+        clientBalance[_clientAddress][_tokenAddress] = clientBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
+        takeToken.safeTransfer(owner, _tokenValue);
+        emit OwnerTakeLockedFund(_clientAddress, _tokenAddress, _tokenValue);
     }
 
     /**
