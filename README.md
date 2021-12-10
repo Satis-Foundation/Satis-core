@@ -11,6 +11,6 @@ Current Satis is deployed to the following testnet
 - Boba: `0x0f4ea4c173598870Bc9A4E8D44afE5e2b8F901Fb`
     - Boba blockexplorer: https://blockexplorer.rinkeby.boba.network/address/0x0f4ea4c173598870Bc9A4E8D44afE5e2b8F901Fb/transactions
 
-# Trading API Doc
+# Testnet Trading API Doc
 Testnet API Docs: https://sandbox-api-doc.sat.is/
 
