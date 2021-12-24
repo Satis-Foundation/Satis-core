@@ -5,8 +5,14 @@ require('@nomiclabs/hardhat-waffle')
 require('@eth-optimism/hardhat-ovm')
 
 module.exports = {
-  
-  solidity: "0.7.6",
+
+  solidity: {
+    compilers: [{
+      version: "0.8.0"
+    }, {
+      version: "0.4.17"
+    },]
+  },
   ovm: {
     solcVersion: "0.7.6",
   },

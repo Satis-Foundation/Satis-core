@@ -559,8 +559,9 @@ contract moneyPoolL2 {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    mapping (address => mapping (address => uint256)) clientBalance;
-    mapping (address => mapping (address => uint256)) clientLockBalance;
+    mapping (address => mapping (address => uint256)) public clientBalance;
+    mapping (address => mapping (address => uint256)) public clientLockBalance;
+    mapping (address => uint256) public clientNonce;
 
     address public owner;
 
@@ -599,13 +600,24 @@ contract moneyPoolL2 {
         owner = msg.sender;
     }
 
+    function getClientNonce(address _clientAddress) public view returns(uint256) {
+      return clientNonce[_clientAddress];
+    }
+
+    function getClientBalance(address _clientAddress, address _tokenAddress) public view returns(uint256) {
+      return clientBalance[_clientAddress][_tokenAddress];
+    }
+
+    function getClientLockBalance(address _clientAddress, address _tokenAddress) public view returns(uint256) {
+      return clientLockBalance[_clientAddress][_tokenAddress];
+    }
+
     /**
      * @dev Transfer the ownership of this contract.
      */
     function transferOwnership(address _newOwner) public isOwner {
         owner = _newOwner;
     }
-
 
     /**
      * @dev Transfers fund to this contract
@@ -724,53 +736,9 @@ contract moneyPoolL2 {
     }
 
     /**
-     * @dev Verify signature to unlock and remove fund in 1 step
-     */
-    function verifyAndRemoveFund(bytes32 _targetHash, bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue) public {
-        bytes32 _matchHash;
-        bytes32 _hashForRecover;
-        address _recoveredAddress;
-        string memory _senderAddressSTR = address2str(msg.sender);
-        string memory _tokenAddressSTR = address2str(_tokenAddress);
-        string memory _withdrawValueSTR = uint2str(_withdrawValue);
-        _matchHash = keccak256(abi.encodePacked(_senderAddressSTR,_tokenAddressSTR,_withdrawValueSTR));
-        require (_targetHash == _matchHash, "Incorrect hash");
-        _hashForRecover = hashingMessage(_matchHash);
-        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
-        require (_recoveredAddress == owner, "Incorrect signature");
-        // Withdraw only when the hash and signature are correct
-        IERC20 withdrawToken = IERC20(_tokenAddress);
-        clientLockBalance[msg.sender][_tokenAddress] = clientLockBalance[msg.sender][_tokenAddress].sub(_withdrawValue);
-        emit Unlock(msg.sender, _tokenAddress, _withdrawValue);
-        withdrawToken.safeTransfer(msg.sender, _withdrawValue);
-        clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].sub(_withdrawValue);
-        emit TransferOut(msg.sender, _tokenAddress, _withdrawValue);
-    }
-
-    /**
-     * @dev Verify signature to unlock fund
-     */
-    function verifyAndUnlockFund(bytes32 _targetHash, bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue) public {
-        bytes32 _matchHash;
-        bytes32 _hashForRecover;
-        address _recoveredAddress;
-        string memory _senderAddressSTR = address2str(msg.sender);
-        string memory _tokenAddressSTR = address2str(_tokenAddress);
-        string memory _withdrawValueSTR = uint2str(_withdrawValue);
-        _matchHash = keccak256(abi.encodePacked(_senderAddressSTR,_tokenAddressSTR,_withdrawValueSTR));
-        require (_targetHash == _matchHash, "Incorrect hash");
-        _hashForRecover = hashingMessage(_matchHash);
-        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
-        require (_recoveredAddress == owner, "Incorrect signature");
-        // Unlock only when the hash and signature are correct
-        clientLockBalance[msg.sender][_tokenAddress] = clientLockBalance[msg.sender][_tokenAddress].sub(_withdrawValue);
-        emit Unlock(msg.sender, _tokenAddress, _withdrawValue);
-    }
-
-    /**
      * @dev Remove fund from this contract.
      */
-    function removeFund(address _tokenAddress, uint256 _tokenValue) external enoughMobileBalance(_tokenAddress, _tokenValue) {
+    function removeFund(address _tokenAddress, uint256 _tokenValue) public enoughMobileBalance(_tokenAddress, _tokenValue) {
         IERC20 withdrawToken = IERC20(_tokenAddress);
         withdrawToken.safeTransfer(msg.sender, _tokenValue);
         clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].sub(_tokenValue);
@@ -783,6 +751,37 @@ contract moneyPoolL2 {
     function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isOwner {
         clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
         emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
+    }
+
+    /**
+     * @dev Verify signature to unlock fund
+     */
+    function verifyAndUnlockFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce) public {
+        require(clientNonce[msg.sender] == _nonce, "Invalid nonce");
+        bytes32 _matchHash;
+        bytes32 _hashForRecover;
+        address _recoveredAddress;
+        string memory _senderAddressSTR = address2str(msg.sender);
+        string memory _tokenAddressSTR = address2str(_tokenAddress);
+        string memory _unlockValueSTR = uint2str(_unlockValue);
+        string memory _nonceSTR = uint2str(_nonce);
+        _matchHash = keccak256(abi.encodePacked(_nonceSTR, _senderAddressSTR,_tokenAddressSTR,_unlockValueSTR));
+        // require (_targetHash == _matchHash, "Incorrect hash");
+        _hashForRecover = hashingMessage(_matchHash);
+        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
+        require (_recoveredAddress == owner, "Incorrect signature");
+        clientNonce[msg.sender] = _nonce.add(1);
+        // unlockFund
+        clientLockBalance[msg.sender][_tokenAddress] = clientLockBalance[msg.sender][_tokenAddress].sub(_unlockValue);
+        emit Unlock(msg.sender, _tokenAddress, _unlockValue);
+    }
+
+    /**
+     * @dev Verify signature to unlock and remove fund in 1 step
+     */
+    function verifyAndRemoveFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce) public {
+        verifyAndUnlockFund(_targetSignature, _tokenAddress, _unlockValue, _nonce);
+        removeFund(_tokenAddress, _withdrawValue);
     }
 
     /**
@@ -802,5 +801,37 @@ contract moneyPoolL2 {
     function viewFund(address _tokenAddress) external view returns(uint256 _totalFund, uint256 _lockedFund) {
         _totalFund = clientBalance[msg.sender][_tokenAddress];
         _lockedFund = clientLockBalance[msg.sender][_tokenAddress];
+    }
+
+    // function check(bytes32 _targetHash, bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _nonce) public view returns(bytes32 _s, string memory _a, string memory _b, string memory _c, string memory _d) {
+    function check(bytes32 _targetHash, bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _nonce) public view returns(string memory _v, bytes32 _s) {
+        // require(clientNonce["0xc4adcF8814a1da13522716A23331Ce4d48A1414d"] == _nonce, "Invalid nonce");
+        bytes32 _matchHash;
+        bytes32 _hashForRecover;
+        address _recoveredAddress;
+        string memory _senderAddressSTR = "0xc4adcF8814a1da13522716A23331Ce4d48A1414d";
+        string memory _tokenAddressSTR = address2str(_tokenAddress);
+        string memory _withdrawValueSTR = uint2str(_withdrawValue);
+        string memory _nonceSTR = uint2str(_nonce);
+        _v = string(abi.encodePacked(_nonceSTR, _senderAddressSTR,_tokenAddressSTR,_withdrawValueSTR));
+        _matchHash = keccak256(abi.encodePacked(_nonceSTR, _senderAddressSTR,_tokenAddressSTR,_withdrawValueSTR));
+        _s = _matchHash;
+        // _a = _senderAddressSTR;
+        // _b = _tokenAddressSTR;
+        // _c = _withdrawValueSTR;
+        // _d = _nonceSTR;
+        // require (_targetHash == _matchHash, "Incorrect hash");
+        // _hashForRecover = hashingMessage(_matchHash);
+        // _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
+        // require (_recoveredAddress == owner, "Incorrect signature");
+        // clientNonce[msg.sender].add(1);
+        // // Withdraw only when the hash and signature are correct
+        // IERC20 withdrawToken = IERC20(_tokenAddress);
+        // clientLockBalance[msg.sender][_tokenAddress] = clientLockBalance[msg.sender][_tokenAddress].sub(_withdrawValue);
+        // emit Unlock(msg.sender, _tokenAddress, _withdrawValue);
+        // withdrawToken.safeTransfer(msg.sender, _withdrawValue);
+        // clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].sub(_withdrawValue);
+        // emit TransferOut(msg.sender, _tokenAddress, _withdrawValue);
+
     }
 }
