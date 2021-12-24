@@ -753,34 +753,81 @@ contract moneyPoolL2 {
         emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
     }
 
+    struct Str {
+      string sender;
+      string token;
+      string unlock;
+      string nonce;
+      string newLock;
+    }
+
     /**
      * @dev Verify signature to unlock fund
      */
-    function verifyAndUnlockFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce) public {
+    function verifyAndUnlockFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue) public {
         require(clientNonce[msg.sender] == _nonce, "Invalid nonce");
         bytes32 _matchHash;
         bytes32 _hashForRecover;
         address _recoveredAddress;
-        string memory _senderAddressSTR = address2str(msg.sender);
-        string memory _tokenAddressSTR = address2str(_tokenAddress);
-        string memory _unlockValueSTR = uint2str(_unlockValue);
-        string memory _nonceSTR = uint2str(_nonce);
-        _matchHash = keccak256(abi.encodePacked(_nonceSTR, _senderAddressSTR,_tokenAddressSTR,_unlockValueSTR));
+        Str memory str;
+        str.sender = address2str(msg.sender);
+        str.token = address2str(_tokenAddress);
+        str.unlock = uint2str(_unlockValue);
+        str.nonce = uint2str(_nonce);
+        str.newLock = uint2str(_newLockValue);
+        _matchHash = keccak256(abi.encodePacked("newlock:", str.newLock, ";", str.nonce, str.sender, str.token, str.unlock));
         // require (_targetHash == _matchHash, "Incorrect hash");
         _hashForRecover = hashingMessage(_matchHash);
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         require (_recoveredAddress == owner, "Incorrect signature");
         clientNonce[msg.sender] = _nonce.add(1);
+
         // unlockFund
+        uint256 oldLock = clientLockBalance[msg.sender][_tokenAddress];
+        uint256 _diff;
+        if (_newLockValue >= oldLock) {
+          _diff = _newLockValue.sub(oldLock);
+          clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].add(_diff);
+        } else {
+          _diff = oldLock.sub(_newLockValue);
+          clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].sub(_diff);
+        }
+        // clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].add(diff);
+        clientLockBalance[msg.sender][_tokenAddress] = _newLockValue;
         clientLockBalance[msg.sender][_tokenAddress] = clientLockBalance[msg.sender][_tokenAddress].sub(_unlockValue);
         emit Unlock(msg.sender, _tokenAddress, _unlockValue);
+    }
+
+    function verify(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue) public view returns (string memory _raw, bytes32 _mid, bytes32 _final) {
+        require(clientNonce[msg.sender] == _nonce, "Invalid nonce");
+        bytes32 _matchHash;
+        bytes32 _hashForRecover;
+        address _recoveredAddress;
+        string memory _senderAddressSTR = "0xc4adcf8814a1da13522716a23331ce4d48a1414d";
+        string memory _tokenAddressSTR = address2str(_tokenAddress);
+        string memory _unlockValueSTR = uint2str(_unlockValue);
+        string memory _nonceSTR = uint2str(_nonce);
+        string memory _newLockValueSTR = uint2str(_newLockValue);
+        _raw = string(abi.encodePacked("newlock:", _newLockValueSTR, ";", _nonceSTR, _senderAddressSTR,_tokenAddressSTR,_unlockValueSTR));
+        _matchHash = keccak256(abi.encodePacked("newlock:", _newLockValueSTR, ";", _nonceSTR, _senderAddressSTR,_tokenAddressSTR,_unlockValueSTR));
+        _mid = _matchHash;
+        // require (_targetHash == _matchHash, "Incorrect hash");
+        _hashForRecover = hashingMessage(_matchHash);
+        _final = _hashForRecover;
+        // _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
+        // require (_recoveredAddress == owner, "Incorrect signature");
+        // clientNonce[msg.sender] = _nonce.add(1);
+        // // unlockFund
+        // clientLockBalance[msg.sender][_tokenAddress] = _newLockValue;
+        // clientLockBalance[msg.sender][_tokenAddress] = clientLockBalance[msg.sender][_tokenAddress].sub(_unlockValue);
+        // emit Unlock(msg.sender, _tokenAddress, _unlockValue);
     }
 
     /**
      * @dev Verify signature to unlock and remove fund in 1 step
      */
-    function verifyAndRemoveFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce) public {
-        verifyAndUnlockFund(_targetSignature, _tokenAddress, _unlockValue, _nonce);
+    function verifyAndRemoveFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue) public {
+        verifyAndUnlockFund(_targetSignature, _tokenAddress, _unlockValue, _nonce, _newLockValue);
         removeFund(_tokenAddress, _withdrawValue);
     }
 
