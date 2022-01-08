@@ -6,10 +6,6 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git@gitlab.com:morning-dev/self-custodial-trading/non-custodial-derivatives.git"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
