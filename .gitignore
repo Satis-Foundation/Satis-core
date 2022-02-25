@@ -10,5 +10,6 @@ typechain
 #Hardhat files
 cache
 artifacts
+scripts
 
 # test mirror
