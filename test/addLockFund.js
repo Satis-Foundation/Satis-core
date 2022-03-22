@@ -4,8 +4,8 @@ const { getContractAddress } = require('@ethersproject/address');
 
 
 
-describe ("Check Add and Lock", function() {
-    it ("Check add and lock together", async function() {
+describe("Check Add and Lock", function () {
+    it("Check add and lock together", async function () {
 
         const signers = await ethers.getSigners();
         console.log("Number of accounts: " + signers.length);
@@ -41,17 +41,17 @@ describe ("Check Add and Lock", function() {
         console.log("User 1 address: " + user1['address']);
         console.log("User 2 address: " + user2['address']);
 
-        await token.connect(user0).transfer(user1['address'],200);
-        await token.connect(user0).transfer(user2['address'],200);
+        await token.connect(user0).transfer(user1['address'], 200);
+        await token.connect(user0).transfer(user2['address'], 200);
 
-        await token.connect(user1).approve(poolAddress,180);
+        await token.connect(user1).approve(poolAddress, 180);
         console.log("Still fine till approve");
         //await pool.connect(user1).addFund(tokenAddress,50);
-        await pool.connect(user1).addFundWithAction(tokenAddress,88,'testAddLockTgt');
+        await pool.connect(user1).addFundWithAction(tokenAddress, 88, 'testAddLockTgt');
         console.log("This is just before calling view function")
         balanceValue = await pool.connect(user1).viewFund(tokenAddress);
-        expect (balanceValue[0]).to.equal(88);
-        expect (balanceValue[1]).to.equal(88);
+        expect(balanceValue[0]).to.equal(88);
+        expect(balanceValue[1]).to.equal(88);
 
     })
 })

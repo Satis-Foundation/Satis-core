@@ -5,8 +5,8 @@ require('@nomiclabs/hardhat-web3');
 
 
 
-describe ("Test Signature", function() {
-    it ("Account Signature", async function() {
+describe("Test Signature", function () {
+    it("Account Signature", async function () {
 
         const signers = await ethers.getSigners();
         console.log("Number of accounts: " + signers.length);
@@ -43,15 +43,15 @@ describe ("Test Signature", function() {
         console.log("User 2 address: " + user2['address']);
         user2Address = user2['address'];
 
-        await token.connect(user0).transfer(user1['address'],100);
-        await token.connect(user0).transfer(user2['address'],100);
+        await token.connect(user0).transfer(user1['address'], 100);
+        await token.connect(user0).transfer(user2['address'], 100);
 
-        await token.connect(user2).approve(poolAddress,100);
-        await pool.connect(user2).addFund(tokenAddress,100);
-        await pool.connect(user2).lockFundWithAction(tokenAddress,90,'lockTest');
+        await token.connect(user2).approve(poolAddress, 100);
+        await pool.connect(user2).addFund(tokenAddress, 100);
+        await pool.connect(user2).lockFundWithAction(tokenAddress, 90, 'lockTest');
         balanceValue = await pool.connect(user2).viewFund(tokenAddress);
-        expect (balanceValue[0]).to.equal(100);
-        expect (balanceValue[1]).to.equal(90);
+        expect(balanceValue[0]).to.equal(100);
+        expect(balanceValue[1]).to.equal(90);
 
 
         /*
@@ -65,7 +65,7 @@ describe ("Test Signature", function() {
         let tokenAddressLow = tokenAddress.toLowerCase();
         //let testHash = await ethers.utils.solidityKeccak256(["string","string","string"],["Hello","World",user2AddressLow]);
         //let testHashByte = ethers.utils.arrayify(testHash);
-        let rawMessageHash = await ethers.utils.solidityKeccak256(["string","string","string"],[user2AddressLow,tokenAddressLow,"80"]);
+        let rawMessageHash = await ethers.utils.solidityKeccak256(["string", "string", "string"], [user2AddressLow, tokenAddressLow, "80"]);
         let rawMessageHashByte = ethers.utils.arrayify(rawMessageHash);
         let contractReceiveHash = ethers.utils.hashMessage(rawMessageHashByte);
         //let smartContractConvertAddress = await pool.connect(user2).testAddressConversion();
@@ -85,8 +85,8 @@ describe ("Test Signature", function() {
         console.log("Signature:");
         console.log(signature1);
 
-        let solidityRecoverReturn = await pool.connect(user2).recoverSignature(contractReceiveHash,signature1);
-        let localRecoverReturn = ethers.utils.verifyMessage(rawMessageHashByte,signature1);
+        let solidityRecoverReturn = await pool.connect(user2).recoverSignature(contractReceiveHash, signature1);
+        let localRecoverReturn = ethers.utils.verifyMessage(rawMessageHashByte, signature1);
         console.log("0: ideal, 1: localRecover, 2: contractRecover");
         console.log(poolOwnerAddress);
         console.log(localRecoverReturn);
@@ -102,11 +102,11 @@ describe ("Test Signature", function() {
         console.log("s value: local, contract");
         console.log(localVRSReturn.s+" "+solidityVRSReturn[1]);
         */
-        
-        await pool.connect(user2).verifyAndRemoveFund(rawMessageHashByte,signature1,tokenAddress,80);
+
+        await pool.connect(user2).verifyAndRemoveFund(rawMessageHashByte, signature1, tokenAddress, 80);
         balanceValue = await pool.connect(user2).viewFund(tokenAddress);
-        expect (balanceValue[0]).to.equal(20);
-        expect (balanceValue[1]).to.equal(10);
+        expect(balanceValue[0]).to.equal(20);
+        expect(balanceValue[1]).to.equal(10);
 
 
         /*
@@ -117,7 +117,7 @@ describe ("Test Signature", function() {
 
         console.log(await web3.eth.getAccounts());
         */
-   
+
         /* const signers = await ethers.getSigners();
         console.log("Number of accounts: " + signers.length);
 

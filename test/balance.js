@@ -4,8 +4,8 @@ const { getContractAddress } = require('@ethersproject/address');
 
 
 
-describe ("Check Money Pool balance", function() {
-    it ("Check balance value", async function() {
+describe("Check Money Pool balance", function () {
+    it("Check balance value", async function () {
 
         const signers = await ethers.getSigners();
         console.log("Number of accounts: " + signers.length);
@@ -41,13 +41,13 @@ describe ("Check Money Pool balance", function() {
         console.log("User 1 address: " + user1['address']);
         console.log("User 2 address: " + user2['address']);
 
-        await token.connect(user0).transfer(user1['address'],100);
-        await token.connect(user0).transfer(user2['address'],100);
+        await token.connect(user0).transfer(user1['address'], 100);
+        await token.connect(user0).transfer(user2['address'], 100);
 
-        await token.connect(user0).approve(poolAddress,500);
-        await pool.connect(user0).addFund(tokenAddress,200);
+        await token.connect(user0).approve(poolAddress, 500);
+        await pool.connect(user0).addFund(tokenAddress, 200);
         balanceValue = await pool.connect(user0).viewFund(tokenAddress);
-        expect (balanceValue[0]).to.equal(200);
+        expect(balanceValue[0]).to.equal(200);
 
     })
 })

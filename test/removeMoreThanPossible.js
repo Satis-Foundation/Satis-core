@@ -4,8 +4,8 @@ const { getContractAddress } = require('@ethersproject/address');
 
 
 
-describe ("Check remove fund more than possible", function() {
-    it ("Remove more than possible", async function() {
+describe("Check remove fund more than possible", function () {
+    it("Remove more than possible", async function () {
 
         const signers = await ethers.getSigners();
         console.log("Number of accounts: " + signers.length);
@@ -41,20 +41,20 @@ describe ("Check remove fund more than possible", function() {
         console.log("User 1 address: " + user1['address']);
         console.log("User 2 address: " + user2['address']);
 
-        await token.connect(user0).transfer(user1['address'],100);
-        await token.connect(user0).transfer(user2['address'],100);
+        await token.connect(user0).transfer(user1['address'], 100);
+        await token.connect(user0).transfer(user2['address'], 100);
 
-        await token.connect(user2).approve(poolAddress,100);
-        await pool.connect(user2).addFund(tokenAddress,100);
-        await pool.connect(user2).lockFundWithAction(tokenAddress,58,'lockTest');
+        await token.connect(user2).approve(poolAddress, 100);
+        await pool.connect(user2).addFund(tokenAddress, 100);
+        await pool.connect(user2).lockFundWithAction(tokenAddress, 58, 'lockTest');
         balanceValue = await pool.connect(user2).viewFund(tokenAddress);
-        expect (balanceValue[0]).to.equal(100);
-        expect (balanceValue[1]).to.equal(58);
+        expect(balanceValue[0]).to.equal(100);
+        expect(balanceValue[1]).to.equal(58);
 
-        await pool.connect(user2).removeFund(tokenAddress,70);
+        await pool.connect(user2).removeFund(tokenAddress, 70);
         balanceValue = await pool.connect(user2).viewFund(tokenAddress);
-        expect (balanceValue[0]).to.equal(30);
-        expect (balanceValue[1]).to.equal(58);
+        expect(balanceValue[0]).to.equal(30);
+        expect(balanceValue[1]).to.equal(58);
 
     })
 })

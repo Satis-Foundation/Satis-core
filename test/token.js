@@ -4,9 +4,9 @@ const { getContractAddress } = require('@ethersproject/address');
 
 
 
-describe ("Deploy Test Token", function() {
+describe("Deploy Test Token", function () {
 
-    it ("Number of minted tokens is consistent", async function() {
+    it("Number of minted tokens is consistent", async function () {
 
         const signers = await ethers.getSigners();
         console.log("Number of accounts: " + signers.length);
@@ -34,10 +34,10 @@ describe ("Deploy Test Token", function() {
 
         const poolAddress = pool.address;
         console.log("Money Pool address: " + poolAddress);
-        
+
         const tokenNumber = await token.totalSupply();
         const initialDistributedTokens = await token.balanceOf(tokenOwner['address']);
-        expect (tokenNumber).to.equal(initialDistributedTokens);
+        expect(tokenNumber).to.equal(initialDistributedTokens);
 
     })
 })
