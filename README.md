@@ -11,6 +11,12 @@ test_token = "0xf1D2D651E955217115Ae5f6b70931534ca36cf09"
 rpc_node = "https://rinkeby.arbitrum.io/rpc"
 ```
 
+```
+// Mumbai Polygon
+const WALLET = "0x3230ABa55A9BC0f95615e0Af61f430813c3FaBDc";
+const USDT = "0x539A7296Ba53dC1Ecbe7e97Dd6f790D1569a5fbB";
+```
+
 # Testnet Trading API Doc
 Testnet API Docs: https://sandbox-api-doc.sat.is/
 
