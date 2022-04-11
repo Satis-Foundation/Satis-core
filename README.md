@@ -13,8 +13,14 @@ rpc_node = "https://rinkeby.arbitrum.io/rpc"
 
 ```
 // Mumbai Polygon
-const WALLET = "0x3230ABa55A9BC0f95615e0Af61f430813c3FaBDc";
-const USDT = "0x539A7296Ba53dC1Ecbe7e97Dd6f790D1569a5fbB";
+core_contract = "0x3230ABa55A9BC0f95615e0Af61f430813c3FaBDc"
+test_token = "0x539A7296Ba53dC1Ecbe7e97Dd6f790D1569a5fbB"
+```
+
+```
+// Near Aurora
+core_contract = "0xADF8a1b0eD40273e79E7957205037313b73E3113"
+test_token = "0xc77E204aCf9B514eAebA6Db02b9C8cc7dc181E2A"
 ```
 
 # Testnet Trading API Doc
