@@ -23,6 +23,12 @@ core_contract = "0xADF8a1b0eD40273e79E7957205037313b73E3113"
 test_token = "0xc77E204aCf9B514eAebA6Db02b9C8cc7dc181E2A"
 ```
 
+```
+// Boba mainnet
+core_contract = "0xc84Ad5BDd20F9dA18c7802Ff09acf7f3bdF37d11"
+test_token = "0xB9BeBE7E27330590f1c843730A3dD4020756505E"
+```
+
 # Testnet Trading API Doc
 Testnet API Docs: https://sandbox-api-doc.sat.is/
 
