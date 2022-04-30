@@ -30,6 +30,13 @@ test_token = "0xB9BeBE7E27330590f1c843730A3dD4020756505E"
 faucet_contract = "0x1DbE2d748601Ee3501C7387709e220b65b364fA6"
 ```
 
+```
+// ZkSync alpha v2
+core_contract = "0x6D81C57B7DC9d384628C6bD1a832C996a2D8eC92"
+test_token = "0x58823635f67cd2Ab6bDA4C49884341d235953A21"
+rpc_node = "https://zksync2-testnet.zksync.dev"
+```
+
 # Testnet Trading API Doc
 Testnet API Docs: https://sandbox-api-doc.sat.is/
 
