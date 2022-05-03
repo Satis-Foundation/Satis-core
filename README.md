@@ -28,6 +28,7 @@ test_token = "0xc77E204aCf9B514eAebA6Db02b9C8cc7dc181E2A"
 core_contract = "0xc84Ad5BDd20F9dA18c7802Ff09acf7f3bdF37d11"
 test_token = "0xB9BeBE7E27330590f1c843730A3dD4020756505E"
 faucet_contract = "0x1DbE2d748601Ee3501C7387709e220b65b364fA6"
+rpc_node = "https://mainnet.boba.network"
 ```
 
 ```
