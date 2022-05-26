@@ -15,6 +15,7 @@ rpc_node = "https://rinkeby.arbitrum.io/rpc"
 // Mumbai Polygon
 core_contract = "0x3230ABa55A9BC0f95615e0Af61f430813c3FaBDc"
 test_token = "0x539A7296Ba53dC1Ecbe7e97Dd6f790D1569a5fbB"
+rpc_node_list = ["https://rpc-mumbai.matic.today","https://rpc-mumbai.maticvigil.com"]
 ```
 
 ```
