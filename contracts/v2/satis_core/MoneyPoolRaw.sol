@@ -68,9 +68,8 @@ contract MoneyPoolRaw {
     /**
      * @dev Sets the value for {owner}
      */
-    constructor(address _proxyContractAddress) {
+    constructor() {
         owner = msg.sender;
-        proxy = _proxyContractAddress;
     }
     }
 
