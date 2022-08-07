@@ -162,15 +162,4 @@ contract MoneyPoolV2 {
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         _isDone = poolContract.verifyAndRemoveFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _withdrawValue, _nonce, _newLockValue);
     }
-
-    /**
-     * @dev Owner taking locked fund.
-     */
-    function ownerTakeLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        address _poolAdmin = poolContract.getPoolOwner();
-        require(msg.sender == _poolAdmin, "You are not pool owner");
-        _isDone = poolContract.ownerTakeLockedFund(_clientAddress, _tokenAddress, _tokenValue);
-    }
 }

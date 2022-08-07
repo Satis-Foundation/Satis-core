@@ -56,9 +56,4 @@ interface IMoneyPoolRaw {
      * @dev Verify, unlock and remove fund.
      */
     function verifyAndRemoveFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue) external returns(bool);
-
-    /**
-     * @dev Pool owner take locked fund.
-     */
-    function ownerTakeLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
 }
