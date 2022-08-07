@@ -68,8 +68,10 @@ contract MoneyPoolRaw {
     /**
      * @dev Sets the value for {owner}
      */
-    constructor() {
+    constructor(address _proxyContractAddress) {
         owner = msg.sender;
+        proxy = _proxyContractAddress;
+    }
     }
 
     function getClientNonce(address _clientAddress) public view returns(uint256) {
@@ -89,6 +91,13 @@ contract MoneyPoolRaw {
      */
     function transferOwnership(address _newOwner) public isOwner {
         owner = _newOwner;
+    }
+
+    /**
+     * @dev Update proxy contract address.
+     */
+    function updateProxyAddress(address _newProxyAddress) public isOwner {
+        proxy = _newProxyAddress;
     }
 
     /**
