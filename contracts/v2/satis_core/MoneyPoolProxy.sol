@@ -146,17 +146,6 @@ contract MoneyPoolV2 {
     }
 
     /**
-     * @dev Unlock fund after settlements.
-     */
-    function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        address _poolAdmin = poolContract.getPoolOwner();
-        require(msg.sender == _poolAdmin, "You are not pool owner");
-        _isDone = poolContract.unlockFund(_clientAddress, _tokenAddress, _tokenValue);
-    }
-
-    /**
      * @dev Verify signature to unlock fund
      */
     function verifyAndUnlockFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue, string memory _poolName) external returns(bool _isDone) {
