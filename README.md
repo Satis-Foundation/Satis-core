@@ -34,8 +34,8 @@ rpc_node = "https://mainnet.boba.network"
 
 ```
 // ZkSync alpha v2
-core_contract = "0x6D81C57B7DC9d384628C6bD1a832C996a2D8eC92"
-test_token = "0x58823635f67cd2Ab6bDA4C49884341d235953A21"
+core_contract = "0x879C7abc040fb30206E1361308BCe4fe54B75Ee2"
+test_token = "0xb417aF79922f3495347F7Ce8fc61A21d24C1C556"
 rpc_node = "https://zksync2-testnet.zksync.dev"
 ```
 
