@@ -312,7 +312,7 @@ contract UpgradedStandardToken is StandardToken{
     function approveByLegacy(address from, address spender, uint value) public;
 }
 
-contract Token is Pausable, StandardToken, BlackList {
+contract TokenT is Pausable, StandardToken, BlackList {
 
     string public name;
     string public symbol;
@@ -327,7 +327,7 @@ contract Token is Pausable, StandardToken, BlackList {
     // @param _name Token Name
     // @param _symbol Token symbol
     // @param _decimals Token decimals
-    function Token() public {
+    function TokenT() public {
         _totalSupply = 1e15 * 10 ** 6;
         name = "t1";
         symbol = "T1";
