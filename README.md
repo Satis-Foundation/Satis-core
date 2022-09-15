@@ -22,8 +22,11 @@ rpc_node_list = ["https://rpc-mumbai.matic.today","https://rpc-mumbai.maticvigil
 
 ```
 // Near Aurora
-core_contract = "0xADF8a1b0eD40273e79E7957205037313b73E3113"
-test_token = "0xc77E204aCf9B514eAebA6Db02b9C8cc7dc181E2A"
+core_contract = "0x318f9D8A63779cA493655Ec206E8D5e5C89b9Bf5"
+test_token_T = "0xF1FB875b381E5cBf1C5139F22130c92e97053f2f"
+test_token_C = "0x2E6B7271B302784217454bd6C06eD4aF01497283"
+rpc_node = "https://testnet.aurora.dev/"
+
 ```
 
 ```
@@ -35,8 +38,16 @@ rpc_node = "https://mainnet.boba.network"
 ```
 
 ```
+// Boba testnet
+core_contract = "0x8D0E04F9446949C7eb62ab686f1418F6AD8517B6"
+test_token_T = "0x985edF378b6e8135Fd7aa39Bf774d1CBDFc76899"
+test_token_C = "0x4FC6e98116aa986567168De5043f4eb7C18acf70"
+rpc_node = "https://rinkeby.boba.network/"
+```
+
+```
 // ZkSync alpha v2
-core_contract = "0x7f170427906eAa50C4bAc12cf7f653d2f0462a67"
+core_contract = "0x2600d96b1Ba6e1cA8C1F83b9A963B8F43c0254E2"
 test_token_T = "0x6fE9B0dd0E32acEDF435950beF53f03074b3375f"
 test_token_C = "0x0551A72D41B76b47a83E6EE5C1914FB1a4c1808a"
 rpc_node = "https://zksync2-testnet.zksync.dev"
@@ -46,6 +57,15 @@ rpc_node = "https://zksync2-testnet.zksync.dev"
 // Cronos Network
 core_contract = "0x298dA0DbFc756161CD8D4446CA1E00667773a2DD"
 test_token = "0x9134F83b88c95A5CdE37dEB4FB4CF295Fca055E9"
+rpc_node = "https://evm-t3.cronos.org"
+```
+
+```
+// Avalanche
+core_contract = "0x3230ABa55A9BC0f95615e0Af61f430813c3FaBDc"
+test_token_T = "0x539A7296Ba53dC1Ecbe7e97Dd6f790D1569a5fbB"
+test_token_C = "0xc77E204aCf9B514eAebA6Db02b9C8cc7dc181E2A"
+rpc_node = "https://api.avax-test.network/ext/bc/C/rpc"
 ```
 
 # Testnet Trading API Doc
