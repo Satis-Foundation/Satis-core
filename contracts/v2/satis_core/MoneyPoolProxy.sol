@@ -91,7 +91,7 @@ contract MoneyPoolV2 {
     /**
      * @dev Transfer the ownership of this contract.
      */
-    function transferOwnership(address _newOwner) external isOwner {
+    function transferOwnershipMoneyPoolProxy(address _newOwner) external isOwner {
         owner = _newOwner;
         emit ChangeOwnership(owner);
     }

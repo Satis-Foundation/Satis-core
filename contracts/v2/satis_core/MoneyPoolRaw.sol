@@ -71,7 +71,6 @@ contract MoneyPoolRaw {
     constructor() {
         owner = msg.sender;
     }
-    }
 
     function getClientNonce(address _clientAddress) public view returns(uint256) {
       return clientNonce[_clientAddress];
