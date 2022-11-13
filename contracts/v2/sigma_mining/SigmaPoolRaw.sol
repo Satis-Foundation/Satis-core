@@ -82,9 +82,15 @@ contract SigmaPoolRaw {
         sigmaOwner = _newOwner;
     }
 
-    function addSigmaWorkers(address[] memory _newWorkerList) public isOwner {
-        for(uint256 i=0; i < _newWorkerList.length; i++) {
-            sigmaWorkerList[_newWorkerList[i]] = true;
+    function addSigmaWorkers(address[] memory _addWorkerList) external isOwner {
+        for(uint256 i=0; i < _addWorkerList.length; i++) {
+            sigmaWorkerList[_addWorkerList[i]] = true;
+        }
+    }
+
+    function removeSigmaWorkers(address[] memory _removeWorkerList) external isOwner {
+        for(uint256 i=0; i < _removeWorkerList.length; i++) {
+            sigmaWorkerList[_removeWorkerList[i]] = false;
         }
     }
 

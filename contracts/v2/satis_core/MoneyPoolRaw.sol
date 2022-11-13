@@ -101,15 +101,20 @@ contract MoneyPoolRaw {
     /**
      * @dev Add workers to this contract.
      */
-    function addWorkers(address[] memory _newWorkerList) public isOwner {
-        for(uint256 i=0; i < _newWorkerList.length; i++) {
-            workerList[_newWorkerList[i]] = true;
+    function addWorkers(address[] memory _addWorkerList) external isOwner {
+        for(uint256 i=0; i < _addWorkerList.length; i++) {
+            workerList[_addWorkerList[i]] = true;
         }
     }
 
     /**
-     * @dev Remove workers from this contract. (Yet to implement)
+     * @dev Remove workers from this contract.
      */
+    function removeWorkers(address[] memory _removeWorkerList) external isOwner {
+        for(uint256 i=0; i < _removeWorkerList.length; i++) {
+            workerList[_removeWorkerList[i]] = false;
+        }
+    }
 
     /**
      * @dev Update proxy contract address.
