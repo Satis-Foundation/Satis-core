@@ -28,6 +28,7 @@ contract MoneyPoolRaw {
     mapping (address => mapping (address => uint256)) public clientBalance;
     mapping (address => mapping (address => uint256)) public clientLockBalance;
     mapping (address => uint256) public clientNonce;
+    mapping (address => bool) public workerList;
 
     address public owner;
     address public proxy;
@@ -40,10 +41,15 @@ contract MoneyPoolRaw {
     event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
     event Lock(address clientAddress, address tokenAddress, uint transactionValue, string transactionData);
     event Unlock(address clientAddress, address tokenAddress, uint transactionValue);
-    event OwnerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
+    event WorkerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
+        _;
+    }
+
+    modifier isWorker() {
+        require (workerList[msg.sender] == true, "Not a worker");
         _;
     }
 
@@ -66,10 +72,11 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Sets the value for {owner}
+     * @dev Sets the value for {owner}, owner is also a worker.
      */
     constructor() {
         owner = msg.sender;
+        workerList[owner] = true;
     }
 
     function getClientNonce(address _clientAddress) public view returns(uint256) {
@@ -92,9 +99,22 @@ contract MoneyPoolRaw {
     }
 
     /**
+     * @dev Add workers to this contract.
+     */
+    function addWorkers(address[] memory _newWorkerList) public isOwner {
+        for(uint256 i=0; i < _newWorkerList.length; i++) {
+            workerList[_newWorkerList[i]] = true;
+        }
+    }
+
+    /**
+     * @dev Remove workers from this contract. (Yet to implement)
+     */
+
+    /**
      * @dev Update proxy contract address.
      */
-    function updateProxyAddress(address _newProxyAddress) public isOwner {
+    function updateProxyAddress(address _newProxyAddress) public isWorker {
         proxy = _newProxyAddress;
     }
 
@@ -103,6 +123,13 @@ contract MoneyPoolRaw {
      */
     function getPoolOwner() public view returns(address _admin) {
         _admin = owner;
+    }
+
+    /**
+     * @dev Check if an address is a worker.
+     */
+    function checkWorker(address _checkAddress) public view returns(bool _isWorker) {
+        _isWorker = workerList[_checkAddress];
     }
 
     /**
@@ -238,7 +265,7 @@ contract MoneyPoolRaw {
     /**
      * @dev Unlock fund after settlements.
      */
-    function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isOwner returns(bool _isDone) {
+    function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
         clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
         emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
@@ -300,14 +327,14 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Owner taking locked fund.
+     * @dev Worker taking locked fund.
      */
-    function ownerTakeLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isOwner returns(bool _isDone) {
+    function workerTakeLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
         IERC20 takeToken = IERC20(_tokenAddress);
         clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
         clientBalance[_clientAddress][_tokenAddress] = clientBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        takeToken.safeTransfer(owner, _tokenValue);
-        emit OwnerTakeLockedFund(_clientAddress, _tokenAddress, _tokenValue);
+        takeToken.safeTransfer(msg.sender, _tokenValue);
+        emit WorkerTakeLockedFund(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 }

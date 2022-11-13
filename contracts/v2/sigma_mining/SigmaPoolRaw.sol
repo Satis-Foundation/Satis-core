@@ -16,6 +16,7 @@ contract SigmaPoolRaw {
     mapping (address => mapping (address => uint256)) public clientSigmaLockBalance;
     mapping (address => uint256) public clientSigmaNonce;
     mapping (address => uint256) public satisTokenBalance;
+    mapping (address => bool) public sigmaWorkerList;
 
     address public sigmaOwner;
     address public sigmaProxy;
@@ -24,11 +25,16 @@ contract SigmaPoolRaw {
     event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
     event Lock(address clientAddress, address tokenAddress, uint transactionValue, string transactionData);
     event Unlock(address clientAddress, address tokenAddress, uint transactionValue);
-    event OwnerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
+    event WorkerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
     event RedeemToken(address clientAddress, address tokenAddress, uint transactionValue);
 
     modifier isOwner() {
         require (msg.sender == sigmaOwner, "Not an admin");
+        _;
+    }
+
+    modifier isWorker() {
+        require (sigmaWorkerList[msg.sender] == true, "Not a worker");
         _;
     }
 
@@ -53,6 +59,7 @@ contract SigmaPoolRaw {
 
     constructor() {
         sigmaOwner = msg.sender;
+        sigmaWorkerList[sigmaOwner] = true;
     }
 
     function getClientSigmaNonce(address _clientAddress) public view returns(uint256) {
@@ -75,12 +82,22 @@ contract SigmaPoolRaw {
         sigmaOwner = _newOwner;
     }
 
-    function updateSigmaProxyAddress(address _newProxyAddress) public isOwner {
+    function addSigmaWorkers(address[] memory _newWorkerList) public isOwner {
+        for(uint256 i=0; i < _newWorkerList.length; i++) {
+            sigmaWorkerList[_newWorkerList[i]] = true;
+        }
+    }
+
+    function updateSigmaProxyAddress(address _newProxyAddress) public isWorker {
         sigmaProxy = _newProxyAddress;
     }
 
     function getSigmaPoolOwner() public view returns(address _admin) {
         _admin = sigmaOwner;
+    }
+
+    function checkSigmaWorker(address _checkAddress) public view returns(bool _isWorker) {
+        _isWorker = sigmaWorkerList[_checkAddress];
     }
 
     function sigmaAddFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
@@ -188,7 +205,7 @@ contract SigmaPoolRaw {
         _isDone = true;
     }
 
-    function sigmaUnlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isOwner returns(bool _isDone) {
+    function sigmaUnlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
         clientSigmaLockBalance[_clientAddress][_tokenAddress] = clientSigmaLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
         emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
@@ -266,6 +283,15 @@ contract SigmaPoolRaw {
         satisToken.safeTransfer(_clientAddress, _redeemValue);
         satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].sub(_redeemValue);
         emit RedeemToken(_clientAddress, _tokenAddress, _redeemValue);
+        _isDone = true;
+    }
+
+    function workerTakeSigmaLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
+        IERC20 takeToken = IERC20(_tokenAddress);
+        clientSigmaLockBalance[_clientAddress][_tokenAddress] = clientSigmaLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
+        clientSigmaBalance[_clientAddress][_tokenAddress] = clientSigmaBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
+        takeToken.safeTransfer(msg.sender, _tokenValue);
+        emit WorkerTakeLockedFund(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 }
