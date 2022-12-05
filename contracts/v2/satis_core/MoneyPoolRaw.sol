@@ -33,14 +33,6 @@ contract MoneyPoolRaw {
     address public owner;
     address public proxy;
 
-    /**
-     * Events that will be triggered when assets are deposited.
-     * The log files will record the sender, recipient and transaction data.
-     */
-    event TransferIn(address clientAddress, address tokenAddress, uint transactionValue);
-    event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
-    event Lock(address clientAddress, address tokenAddress, uint transactionValue, string transactionData);
-    event Unlock(address clientAddress, address tokenAddress, uint transactionValue);
     event WorkerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
 
     modifier isOwner() {
@@ -74,9 +66,10 @@ contract MoneyPoolRaw {
     /**
      * @dev Sets the value for {owner}, owner is also a worker.
      */
-    constructor() {
+    constructor(address _initialProxyAddress) {
         owner = msg.sender;
         workerList[owner] = true;
+        proxy = _initialProxyAddress;
     }
 
     function getClientNonce(address _clientAddress) public view returns(uint256) {
@@ -133,8 +126,8 @@ contract MoneyPoolRaw {
     /**
      * @dev Check if an address is a worker.
      */
-    function checkWorker(address _checkAddress) public view returns(bool _isWorker) {
-        _isWorker = workerList[_checkAddress];
+    function verifyWorker(address _workerAddress) public view returns(bool _isWorker) {
+        _isWorker = workerList[_workerAddress];
     }
 
     /**
@@ -144,7 +137,6 @@ contract MoneyPoolRaw {
         IERC20 depositToken = IERC20(_tokenAddress);
         depositToken.safeTransferFrom(_clientAddress, address(this), _tokenValue);
         clientBalance[_clientAddress][_tokenAddress] = clientBalance[_clientAddress][_tokenAddress].add(_tokenValue);
-        emit TransferIn(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 
@@ -153,7 +145,6 @@ contract MoneyPoolRaw {
      */
     function lockFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) public isProxy enoughMobileBalance(_clientAddress, _tokenAddress, _tokenValue) returns(bool _isDone) {
         clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].add(_tokenValue);
-        emit Lock(_clientAddress, _tokenAddress, _tokenValue, _data);
         _isDone = true;
     }
 
@@ -263,7 +254,6 @@ contract MoneyPoolRaw {
         IERC20 withdrawToken = IERC20(_tokenAddress);
         withdrawToken.safeTransfer(_clientAddress, _tokenValue);
         clientBalance[_clientAddress][_tokenAddress] = clientBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        emit TransferOut(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 
@@ -272,7 +262,6 @@ contract MoneyPoolRaw {
      */
     function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
         clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 
@@ -318,7 +307,6 @@ contract MoneyPoolRaw {
         // clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].add(diff);
         clientLockBalance[_clientAddress][_tokenAddress] = _newLockValue;
         clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_unlockValue);
-        emit Unlock(_clientAddress, _tokenAddress, _unlockValue);
         _isDone = true;
     }
 

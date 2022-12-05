@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../lib_and_interface/IMoneyPoolRaw.sol";
+import "../lib_and_interface/IAction.sol";
 
 /**
  * This contract is a simple money pool for deposit.
@@ -20,7 +21,9 @@ import "../lib_and_interface/IMoneyPoolRaw.sol";
 contract MoneyPoolV2 {
 
     address public owner;
+    address public actionContractAddress;
     mapping (string => address) public poolAddressList;
+    mapping (address => bool) public workerList;
 
     /**
      * Events that will be triggered when assets are deposited.
@@ -34,15 +37,22 @@ contract MoneyPoolV2 {
         _;
     }
 
+    modifier isWorker() {
+        require (workerList[msg.sender] == true, "Not a worker");
+        _;
+    }
+
     /**
-     * @dev Sets the value for {owner}
+     * @dev Sets the value for {owner}, {workerList} and {poolList}
      */
-    constructor(string[] memory _poolNameList, address[] memory _poolAddressList) {
+    constructor(string[] memory _poolNameList, address[] memory _poolAddressList, address _actionContractAddress) {
         require(_poolNameList.length == _poolAddressList.length, "Lists' length is different");
         owner = msg.sender;
+        workerList[owner] = true;
         for(uint256 i=0; i < _poolAddressList.length; i++) {
             poolAddressList[_poolNameList[i]] = _poolAddressList[i];
         }
+        actionContractAddress = _actionContractAddress;
     }
 
     /**
@@ -82,6 +92,13 @@ contract MoneyPoolV2 {
     }
 
     /**
+     * @dev Check if an address is a worker.
+     */
+    function verifyWorker(address _workerAddress) public view returns(bool _isWorker) {
+        _isWorker = workerList[_workerAddress];
+    }
+
+    /**
      * @dev Get a pool's address with its name.
      */
     function getPoolAddress(string memory _poolName) public view returns(address _poolAddress) {
@@ -99,7 +116,7 @@ contract MoneyPoolV2 {
     /**
      * @dev Append and overwrite pool address list. Set address to 0x0 for deleting pool.
      */
-    function changePool(string[] memory _newPoolNameList, address[] memory _newPoolAddressList) external {
+    function changePool(string[] memory _newPoolNameList, address[] memory _newPoolAddressList) external isWorker {
         require(_newPoolNameList.length == _newPoolAddressList.length, "Lists' length is different");
         for(uint256 i=0; i < _newPoolAddressList.length; i++) {
             poolAddressList[_newPoolNameList[i]] = _newPoolAddressList[i];
@@ -108,12 +125,22 @@ contract MoneyPoolV2 {
     }
 
     /**
+     * @dev Change action contract address for new event output format.
+     */
+    function changeActionContract(address _newActionContractAddress) external isWorker {
+        actionContractAddress = _newActionContractAddress;
+    }
+
+    /**
      * @dev Transfers fund to this contract
      */
     function addFund(address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        _isDone = poolContract.addFund(msg.sender, _tokenAddress, _tokenValue);
+        bool _addDone = poolContract.addFund(msg.sender, _tokenAddress, _tokenValue);
+        IAction actionContract = IAction(actionContractAddress);
+        bool _eventDone = actionContract.addFund(msg.sender, _tokenAddress, _tokenValue);
+        _isDone = _addDone && _eventDone;
     }
 
     /**
@@ -122,7 +149,10 @@ contract MoneyPoolV2 {
     function lockFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        _isDone = poolContract.lockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
+        bool _lockDone = poolContract.lockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
+        IAction actionContract = IAction(actionContractAddress);
+        bool _eventDone = actionContract.lockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
+        _isDone = _lockDone && _eventDone;
     }
 
     /**
@@ -133,7 +163,10 @@ contract MoneyPoolV2 {
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         bool _addDone = poolContract.addFund(msg.sender, _tokenAddress, _addValue);
         bool _lockDone = poolContract.lockFundWithAction(msg.sender, _tokenAddress, _lockValue, _data);
-        _isDone = _addDone && _lockDone;
+        IAction actionContract = IAction(actionContractAddress);
+        bool _addEvent = actionContract.addFund(msg.sender, _tokenAddress, _addValue);
+        bool _lockEvent = actionContract.lockFundWithAction(msg.sender, _tokenAddress, _lockValue, _data);
+        _isDone = _addDone && _lockDone && _addEvent && _lockEvent;
     }
 
     /**
@@ -142,7 +175,10 @@ contract MoneyPoolV2 {
     function removeFund(address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        _isDone = poolContract.removeFund(msg.sender, _tokenAddress, _tokenValue);
+        bool _removeDone = poolContract.removeFund(msg.sender, _tokenAddress, _tokenValue);
+        IAction actionContract = IAction(actionContractAddress);
+        bool _eventDone = actionContract.removeFund(msg.sender, _tokenAddress, _tokenValue);
+        _isDone = _removeDone && _eventDone;
     }
 
     /**
@@ -151,7 +187,10 @@ contract MoneyPoolV2 {
     function verifyAndUnlockFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        _isDone = poolContract.verifyAndUnlockFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _nonce, _newLockValue);
+        bool _unlockDone = poolContract.verifyAndUnlockFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _nonce, _newLockValue);
+        IAction actionContract = IAction(actionContractAddress);
+        bool _eventDone = actionContract.unlockFund(msg.sender, _tokenAddress, _unlockValue);
+        _isDone = _unlockDone && _eventDone;
     }
 
     /**
@@ -160,6 +199,10 @@ contract MoneyPoolV2 {
     function verifyAndRemoveFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        _isDone = poolContract.verifyAndRemoveFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _withdrawValue, _nonce, _newLockValue);
+        bool _verifyAndRemoveDone = poolContract.verifyAndRemoveFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _withdrawValue, _nonce, _newLockValue);
+        IAction actionContract = IAction(actionContractAddress);
+        bool _unlockEvent = actionContract.unlockFund(msg.sender, _tokenAddress, _unlockValue);
+        bool _removeEvent = actionContract.removeFund(msg.sender, _tokenAddress, _withdrawValue);
+        _isDone = _verifyAndRemoveDone && _unlockEvent && _removeEvent;
     }
 }
