@@ -114,6 +114,24 @@ contract MoneyPoolV2 {
     }
 
     /**
+     * @dev Add workers to this contract.
+     */
+    function addWorkers(address[] memory _addWorkerList) external isOwner {
+        for(uint256 i=0; i < _addWorkerList.length; i++) {
+            workerList[_addWorkerList[i]] = true;
+        }
+    }
+
+    /**
+     * @dev Remove workers from this contract.
+     */
+    function removeWorkers(address[] memory _removeWorkerList) external isOwner {
+        for(uint256 i=0; i < _removeWorkerList.length; i++) {
+            workerList[_removeWorkerList[i]] = false;
+        }
+    }
+
+    /**
      * @dev Append and overwrite pool address list. Set address to 0x0 for deleting pool.
      */
     function changePool(string[] memory _newPoolNameList, address[] memory _newPoolAddressList) external isWorker {

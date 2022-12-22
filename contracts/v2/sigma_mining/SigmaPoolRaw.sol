@@ -21,12 +21,7 @@ contract SigmaPoolRaw {
     address public sigmaOwner;
     address public sigmaProxy;
 
-    event TransferIn(address clientAddress, address tokenAddress, uint transactionValue);
-    event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
-    event Lock(address clientAddress, address tokenAddress, uint transactionValue, string transactionData);
-    event Unlock(address clientAddress, address tokenAddress, uint transactionValue);
     event WorkerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
-    event RedeemToken(address clientAddress, address tokenAddress, uint transactionValue);
 
     modifier isOwner() {
         require (msg.sender == sigmaOwner, "Not an admin");
@@ -57,9 +52,10 @@ contract SigmaPoolRaw {
     }
 
 
-    constructor() {
+    constructor(address _initialProxyAddress) {
         sigmaOwner = msg.sender;
         sigmaWorkerList[sigmaOwner] = true;
+        sigmaProxy = _initialProxyAddress;
     }
 
     function getClientSigmaNonce(address _clientAddress) public view returns(uint256) {
@@ -102,7 +98,7 @@ contract SigmaPoolRaw {
         _admin = sigmaOwner;
     }
 
-    function checkSigmaWorker(address _checkAddress) public view returns(bool _isWorker) {
+    function verifySigmaWorker(address _checkAddress) public view returns(bool _isWorker) {
         _isWorker = sigmaWorkerList[_checkAddress];
     }
 
@@ -110,13 +106,11 @@ contract SigmaPoolRaw {
         IERC20 depositToken = IERC20(_tokenAddress);
         depositToken.safeTransferFrom(_clientAddress, address(this), _tokenValue);
         clientSigmaBalance[_clientAddress][_tokenAddress] = clientSigmaBalance[_clientAddress][_tokenAddress].add(_tokenValue);
-        emit TransferIn(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 
     function sigmaLockFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) public isProxy enoughMobileBalance(_clientAddress, _tokenAddress, _tokenValue) returns(bool _isDone) {
         clientSigmaLockBalance[_clientAddress][_tokenAddress] = clientSigmaLockBalance[_clientAddress][_tokenAddress].add(_tokenValue);
-        emit Lock(_clientAddress, _tokenAddress, _tokenValue, _data);
         _isDone = true;
     }
 
@@ -207,13 +201,11 @@ contract SigmaPoolRaw {
         IERC20 withdrawToken = IERC20(_tokenAddress);
         withdrawToken.safeTransfer(_clientAddress, _tokenValue);
         clientSigmaBalance[_clientAddress][_tokenAddress] = clientSigmaBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        emit TransferOut(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 
     function sigmaUnlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
         clientSigmaLockBalance[_clientAddress][_tokenAddress] = clientSigmaLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 
@@ -262,7 +254,6 @@ contract SigmaPoolRaw {
         // clientBalance[msg.sender][_tokenAddress] = clientBalance[msg.sender][_tokenAddress].add(diff);
         clientSigmaLockBalance[_clientAddress][_tokenAddress] = _newLockValue;
         clientSigmaLockBalance[_clientAddress][_tokenAddress] = clientSigmaLockBalance[_clientAddress][_tokenAddress].sub(_unlockValue);
-        emit Unlock(_clientAddress, _tokenAddress, _unlockValue);
         _isDone = true;
     }
 
@@ -276,7 +267,6 @@ contract SigmaPoolRaw {
         IERC20 satisToken = IERC20(_tokenAddress);
         satisToken.safeTransferFrom(msg.sender, address(this), _fundingValue);
         satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].add(_fundingValue);
-        emit TransferIn(msg.sender, _tokenAddress, _fundingValue);
         _isDone = true;
     }
 
@@ -288,7 +278,6 @@ contract SigmaPoolRaw {
         IERC20 satisToken = IERC20(_tokenAddress);
         satisToken.safeTransfer(_clientAddress, _redeemValue);
         satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].sub(_redeemValue);
-        emit RedeemToken(_clientAddress, _tokenAddress, _redeemValue);
         _isDone = true;
     }
 
