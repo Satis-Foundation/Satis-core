@@ -33,7 +33,8 @@ contract MoneyPoolRaw {
     address public owner;
     address public proxy;
 
-    event WorkerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
+    event WorkerTakeLockedFund(address[] clientAddressList, address tokenAddress, uint256[] takeValueList);
+    event WorkerDumpBridgedFund(address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
@@ -320,14 +321,32 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Worker taking locked fund.
+     * @dev Worker taking locked fund for bridging.
      */
-    function workerTakeLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
+    function workerTakeLockedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) external isWorker returns(bool _isDone) {
+        require(_clientAddressList.length == _tokenValueList.length, "Lists length not match");
         IERC20 takeToken = IERC20(_tokenAddress);
-        clientLockBalance[_clientAddress][_tokenAddress] = clientLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        clientBalance[_clientAddress][_tokenAddress] = clientBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        takeToken.safeTransfer(msg.sender, _tokenValue);
-        emit WorkerTakeLockedFund(_clientAddress, _tokenAddress, _tokenValue);
+        for(uint256 i=0; i < _clientAddressList.length; i++) {
+            clientLockBalance[_clientAddressList[i]][_tokenAddress] = clientLockBalance[_clientAddressList[i]][_tokenAddress].sub(_tokenValueList[i]);
+            clientBalance[_clientAddressList[i]][_tokenAddress] = clientBalance[_clientAddressList[i]][_tokenAddress].sub(_tokenValueList[i]);
+            takeToken.safeTransfer(msg.sender, _tokenValueList[i]);
+        }
+        emit WorkerTakeLockedFund(_clientAddressList, _tokenAddress, _tokenValueList);
+        _isDone = true;
+    }
+
+    /**
+     * @dev Worker dumping crosschain fund from bridge.
+     */
+    function workerDumpBridgedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) external isWorker returns(bool _isDone) {
+        require(_clientAddressList.length == _tokenValueList.length, "Lists length not match");
+        IERC20 dumpToken = IERC20(_tokenAddress);
+        for(uint256 i=0; i < _clientAddressList.length; i++) {
+            clientLockBalance[_clientAddressList[i]][_tokenAddress] = clientLockBalance[_clientAddressList[i]][_tokenAddress].add(_tokenValueList[i]);
+            clientBalance[_clientAddressList[i]][_tokenAddress] = clientBalance[_clientAddressList[i]][_tokenAddress].add(_tokenValueList[i]);
+            dumpToken.safeTransferFrom(msg.sender, address(this), _tokenValueList[i]);
+        }
+        emit WorkerDumpBridgedFund(_clientAddressList, _tokenAddress, _tokenValueList);
         _isDone = true;
     }
 }

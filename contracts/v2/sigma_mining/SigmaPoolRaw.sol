@@ -21,7 +21,8 @@ contract SigmaPoolRaw {
     address public sigmaOwner;
     address public sigmaProxy;
 
-    event WorkerTakeLockedFund(address clientAddress, address tokenAddress, uint transactionValue);
+    event WorkerTakeLockedFund(address[] clientAddressList, address tokenAddress, uint256[] takeValueList);
+    event WorkerDumpBridgedFund(address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
 
     modifier isOwner() {
         require (msg.sender == sigmaOwner, "Not an admin");
@@ -281,12 +282,27 @@ contract SigmaPoolRaw {
         _isDone = true;
     }
 
-    function workerTakeSigmaLockedFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isWorker returns(bool _isDone) {
+    function workerTakeSigmaLockedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) external isWorker returns(bool _isDone) {
+        require(_clientAddressList.length == _tokenValueList.length, "Lists length not match");
         IERC20 takeToken = IERC20(_tokenAddress);
-        clientSigmaLockBalance[_clientAddress][_tokenAddress] = clientSigmaLockBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        clientSigmaBalance[_clientAddress][_tokenAddress] = clientSigmaBalance[_clientAddress][_tokenAddress].sub(_tokenValue);
-        takeToken.safeTransfer(msg.sender, _tokenValue);
-        emit WorkerTakeLockedFund(_clientAddress, _tokenAddress, _tokenValue);
+        for(uint256 i=0; i < _clientAddressList.length; i++) {
+            clientSigmaLockBalance[_clientAddressList[i]][_tokenAddress] = clientSigmaLockBalance[_clientAddressList[i]][_tokenAddress].sub(_tokenValueList[i]);
+            clientSigmaBalance[_clientAddressList[i]][_tokenAddress] = clientSigmaBalance[_clientAddressList[i]][_tokenAddress].sub(_tokenValueList[i]);
+            takeToken.safeTransfer(msg.sender, _tokenValueList[i]);
+        }
+        emit WorkerTakeLockedFund(_clientAddressList, _tokenAddress, _tokenValueList);
+        _isDone = true;
+    }
+
+    function workerDumpSigmaBridgedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) external isWorker returns(bool _isDone) {
+        require(_clientAddressList.length == _tokenValueList.length, "Lists length not match");
+        IERC20 dumpToken = IERC20(_tokenAddress);
+        for(uint256 i=0; i < _clientAddressList.length; i++) {
+            clientSigmaLockBalance[_clientAddressList[i]][_tokenAddress] = clientSigmaLockBalance[_clientAddressList[i]][_tokenAddress].add(_tokenValueList[i]);
+            clientSigmaBalance[_clientAddressList[i]][_tokenAddress] = clientSigmaBalance[_clientAddressList[i]][_tokenAddress].add(_tokenValueList[i]);
+            dumpToken.safeTransferFrom(msg.sender, address(this), _tokenValueList[i]);
+        }
+        emit WorkerDumpBridgedFund(_clientAddressList, _tokenAddress, _tokenValueList);
         _isDone = true;
     }
 }
