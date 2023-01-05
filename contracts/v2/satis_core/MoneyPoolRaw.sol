@@ -28,10 +28,12 @@ contract MoneyPoolRaw {
     mapping (address => mapping (address => uint256)) public clientBalance;
     mapping (address => mapping (address => uint256)) public clientLockBalance;
     mapping (address => uint256) public clientNonce;
+    mapping (address => uint256) public satisTokenBalance;
     mapping (address => bool) public workerList;
 
     address public owner;
     address public proxy;
+    address public sigmaProxy;
 
     event WorkerTakeLockedFund(address[] clientAddressList, address tokenAddress, uint256[] takeValueList);
     event WorkerDumpBridgedFund(address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
@@ -47,7 +49,7 @@ contract MoneyPoolRaw {
     }
 
     modifier isProxy() {
-        require (msg.sender == proxy, "Please use proxy contract.");
+        require (msg.sender == proxy || msg.sender == sigmaProxy, "Please use proxy contract.");
         _;
     }
 
@@ -67,10 +69,11 @@ contract MoneyPoolRaw {
     /**
      * @dev Sets the value for {owner}, owner is also a worker.
      */
-    constructor(address _initialProxyAddress) {
+    constructor(address _initialProxyAddress, address _initialSigmaProxyAddress) {
         owner = msg.sender;
         workerList[owner] = true;
         proxy = _initialProxyAddress;
+        sigmaProxy = _initialSigmaProxyAddress;
     }
 
     function getClientNonce(address _clientAddress) public view returns(uint256) {
@@ -83,6 +86,10 @@ contract MoneyPoolRaw {
 
     function getClientLockBalance(address _clientAddress, address _tokenAddress) public view returns(uint256) {
       return clientLockBalance[_clientAddress][_tokenAddress];
+    }
+
+    function getSatisTokenAmountInContract(address _tokenAddress) public view returns(uint256) {
+        return satisTokenBalance[_tokenAddress];
     }
 
     /**
@@ -115,6 +122,13 @@ contract MoneyPoolRaw {
      */
     function updateProxyAddress(address _newProxyAddress) public isWorker {
         proxy = _newProxyAddress;
+    }
+
+    /**
+     * @dev Update sigma mining proxy contract address.
+     */
+    function updateSigmaProxyAddress(address _newSigmaProxyAddress) public isWorker {
+        sigmaProxy = _newSigmaProxyAddress;
     }
 
     /**
@@ -275,9 +289,9 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Verify signature to unlock fund
+     * @dev Verify signature, internal function
      */
-    function verifyAndUnlockFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue) public isProxy returns(bool _isDone) {
+    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue) internal view returns(bool _isDone) {
         require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
         bytes32 _matchHash;
         bytes32 _hashForRecover;
@@ -293,6 +307,15 @@ contract MoneyPoolRaw {
         _hashForRecover = hashingMessage(_matchHash);
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         require (_recoveredAddress == owner, "Incorrect signature");
+        _isDone = true;
+    }
+
+    /**
+     * @dev Verify signature to unlock fund
+     */
+    function verifyAndUnlockFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue) public isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _unlockValue, _nonce, _newLockValue);
+        require (_verification == true, "Signature verification fails");
         clientNonce[_clientAddress] = _nonce.add(1);
 
         // unlockFund
@@ -317,6 +340,42 @@ contract MoneyPoolRaw {
     function verifyAndRemoveFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue) public isProxy returns(bool _isDone) {
         verifyAndUnlockFund(_targetSignature, _clientAddress, _tokenAddress, _unlockValue, _nonce, _newLockValue);
         removeFund(_clientAddress, _tokenAddress, _withdrawValue);
+        _isDone = true;
+    }
+
+    /**
+     * @dev Verify signature for redeeming SATIS token in Sigma Mining
+     */
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _nonce) external isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _nonce, _redeemValue);
+        require (_verification == true, "Signature verification fails");
+        require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
+        clientNonce[_clientAddress] = _nonce.add(1);
+
+        //Send redeemed token
+        IERC20 satisToken = IERC20(_tokenAddress);
+        satisToken.safeTransfer(_clientAddress, _redeemValue);
+        satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].sub(_redeemValue);
+        _isDone = true;
+    }
+
+    /**
+     * @dev Fund SATIS token to this contract
+     */
+    function fundSatisToken(address _tokenAddress, uint256 _fundingValue) external isWorker returns(bool _isDone) {
+        IERC20 satisToken = IERC20(_tokenAddress);
+        satisToken.safeTransferFrom(msg.sender, address(this), _fundingValue);
+        satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].add(_fundingValue);
+        _isDone = true;
+    }
+
+    /**
+     * @dev Workers take SATIS token from this contract
+     */
+    function workerTakeSaisToken(address _tokenAddress, uint256 _takingValue) external isWorker returns(bool _isDone) {
+        IERC20 satisToken = IERC20(_tokenAddress);
+        satisToken.safeTransfer(msg.sender, _takingValue);
+        satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].sub(_takingValue);
         _isDone = true;
     }
 

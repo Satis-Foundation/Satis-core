@@ -2,7 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import "../lib_and_interface/ISigmaPoolRaw.sol";
+//import "../lib_and_interface/ISigmaPoolRaw.sol";
+import "../lib_and_interface/IMoneyPoolRaw.sol";
+import "../lib_and_interface/ISigmaAction.sol";
+import "../lib_and_interface/Address.sol";
+import "../lib_and_interface/SafeMath.sol";
+import "../lib_and_interface/IERC20.sol";
+import "../lib_and_interface/SafeERC20.sol";
 
 /**
  * This contract is a simple money pool for deposit.
@@ -19,10 +25,14 @@ import "../lib_and_interface/ISigmaPoolRaw.sol";
 
 contract SigmaPoolV2 {
 
+    using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+
     address public sigmaOwner;
     address public sigmaActionContractAddress;
     mapping (string => address) public sigmaPoolAddressList;
     mapping (address => bool) public sigmaProxyWorkerList;
+    mapping (address => uint256) public satisTokenBalance;
 
     /**
      * Events that will be triggered when assets are deposited.
@@ -59,8 +69,8 @@ contract SigmaPoolV2 {
      */
     function getClientSigmaNonce(address _clientAddress, string memory _poolName) external view returns(uint256 clientSigmaNonce) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        clientSigmaNonce = sigmaPoolContract.getClientSigmaNonce(_clientAddress);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        clientSigmaNonce = sigmaPoolContract.getClientNonce(_clientAddress);
     }
 
     /**
@@ -68,8 +78,8 @@ contract SigmaPoolV2 {
      */
     function getClientSigmaBalance(address _clientAddress, address _tokenAddress, string memory _poolName) external view returns(uint256 clientSigmaBalance) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        clientSigmaBalance = sigmaPoolContract.getClientSigmaBalance(_clientAddress, _tokenAddress);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        clientSigmaBalance = sigmaPoolContract.getClientBalance(_clientAddress, _tokenAddress);
     }
 
     /**
@@ -77,26 +87,24 @@ contract SigmaPoolV2 {
      */
     function getClientSigmaLockBalance(address _clientAddress, address _tokenAddress, string memory _poolName) external view returns(uint256 clientSigmaLockBalance) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        clientSigmaLockBalance = sigmaPoolContract.getClientSigmaLockBalance(_clientAddress, _tokenAddress);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        clientSigmaLockBalance = sigmaPoolContract.getClientLockBalance(_clientAddress, _tokenAddress);
     }
 
     /**
      * @dev Get contract's storage of SATIS tokens.
      */
-    function getSatisTokenAmountInContract(address _tokenAddress, string memory _poolName) external view returns(uint256 satisTokenAmount) {
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        satisTokenAmount = sigmaPoolContract.getSatisTokenAmountInContract(_tokenAddress);
+    function getSatisTokenAmountInContract(address _tokenAddress) public view returns(uint256) {
+        return satisTokenBalance[_tokenAddress];
     }
 
     /**
      * @dev Get the particular pool's owner.
      */
     function getSigmaPoolOwner(string memory _poolName) external view returns(address sigmaPoolOwner) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        sigmaPoolOwner = sigmaPoolContract.getSigmaPoolOwner();
+        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        sigmaPoolOwner = sigmaPoolContract.getPoolOwner();
     }
 
     /**
@@ -110,8 +118,8 @@ contract SigmaPoolV2 {
      * @dev Transfer the ownership of this contract.
      */
     function transferOwnershipSigmaPoolProxy(address _newOwner) external isOwner {
-        owner = _newOwner;
-        emit ChangeOwnership(owner);
+        sigmaOwner = _newOwner;
+        emit ChangeOwnership(sigmaOwner);
     }
 
     /**
@@ -119,7 +127,7 @@ contract SigmaPoolV2 {
      */
     function addWorkers(address[] memory _addWorkerList) external isOwner {
         for(uint256 i=0; i < _addWorkerList.length; i++) {
-            workerList[_addWorkerList[i]] = true;
+            sigmaProxyWorkerList[_addWorkerList[i]] = true;
         }
     }
 
@@ -128,7 +136,7 @@ contract SigmaPoolV2 {
      */
     function removeWorkers(address[] memory _removeWorkerList) external isOwner {
         for(uint256 i=0; i < _removeWorkerList.length; i++) {
-            workerList[_removeWorkerList[i]] = false;
+            sigmaProxyWorkerList[_removeWorkerList[i]] = false;
         }
     }
 
@@ -159,8 +167,8 @@ contract SigmaPoolV2 {
      */
     function sigmaAddFund(address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _addDone = sigmaPoolContract.sigmaAddFund(msg.sender, _tokenAddress, _tokenValue);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        bool _addDone = sigmaPoolContract.addFund(msg.sender, _tokenAddress, _tokenValue);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _eventDone = sigmaActionContract.sigmaAddFund(msg.sender, _tokenAddress, _tokenValue);
         _isDone = _addDone && _eventDone;
@@ -171,8 +179,8 @@ contract SigmaPoolV2 {
      */
     function sigmaLockFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _lockDone = sigmaPoolContract.sigmaLockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        bool _lockDone = sigmaPoolContract.lockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _eventDone = sigmaActionContract.sigmaLockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
         _isDone = _lockDone && _eventDone;
@@ -183,9 +191,9 @@ contract SigmaPoolV2 {
      */
     function sigmaAddFundWithAction(address _tokenAddress, uint256 _lockValue, uint256 _addValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmPoolAddressList[_poolName]);
-        bool _addDone = sigmaPoolContract.sigmaAddFund(msg.sender, _tokenAddress, _addValue);
-        bool _lockDone = sigmaPoolContract.sigmaLockFundWithAction(msg.sender, _tokenAddress, _lockValue, _data);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        bool _addDone = sigmaPoolContract.addFund(msg.sender, _tokenAddress, _addValue);
+        bool _lockDone = sigmaPoolContract.lockFundWithAction(msg.sender, _tokenAddress, _lockValue, _data);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _addEvent = sigmaActionContract.sigmaAddFund(msg.sender, _tokenAddress, _addValue);
         bool _lockEvent = sigmaActionContract.sigmaLockFundWithAction(msg.sender, _tokenAddress, _lockValue, _data);
@@ -197,8 +205,8 @@ contract SigmaPoolV2 {
      */
     function sigmaRemoveFund(address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _removeDone = sigmaPoolContract.sigmaRemoveFund(msg.sender, _tokenAddress, _tokenValue);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        bool _removeDone = sigmaPoolContract.removeFund(msg.sender, _tokenAddress, _tokenValue);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _eventDone = sigmaActionContract.sigmaRemoveFund(msg.sender, _tokenAddress, _tokenValue);
         _isDone = _removeDone && _eventDone;
@@ -209,8 +217,8 @@ contract SigmaPoolV2 {
      */
     function sigmaVerifyAndUnlockFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _unlockDone = sigmaPoolContract.sigmaVerifyAndUnlockFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _nonce, _newLockValue);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        bool _unlockDone = sigmaPoolContract.verifyAndUnlockFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _nonce, _newLockValue);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _eventDone = sigmaActionContract.sigmaUnlockFund(msg.sender, _tokenAddress, _unlockValue);
         _isDone = _unlockDone && _eventDone;
@@ -221,8 +229,8 @@ contract SigmaPoolV2 {
      */
     function sigmaVerifyAndRemoveFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _verifyAndRemoveDone = sigmaPoolContract.sigmaVerifyAndRemoveFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _withdrawValue, _nonce, _newLockValue);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        bool _verifyAndRemoveDone = sigmaPoolContract.verifyAndRemoveFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _withdrawValue, _nonce, _newLockValue);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _unlockEvent = sigmaActionContract.sigmaUnlockFund(msg.sender, _tokenAddress, _unlockValue);
         bool _removeEvent = sigmaActionContract.sigmaRemoveFund(msg.sender, _tokenAddress, _withdrawValue);
@@ -232,24 +240,20 @@ contract SigmaPoolV2 {
     /**
      * @dev Verify signature to redeem SATIS tokens
      */
-    function sigmaVerifyAndRedeemToken(bytes memory _targetSignature, address _tokenAddress, uint256 _redeemValue, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+    // function sigmaVerifyAndRedeemToken(bytes memory _targetSignature, address _tokenAddress, uint256 _redeemValue, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+    //     require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
+    //     ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
+    //     bool _redeemDone = sigmaPoolContract.sigmaVerifyAndRedeemToken(_targetSignature, msg.sender, _tokenAddress, _redeemValue, _nonce);
+    //     ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
+    //     bool _eventDone = sigmaActionContract.sigmaVerifyAndRedeemToken(msg.sender, _tokenAddress, _redeemValue);
+    //     _isDone = _redeemDone && _eventDone;
+    // }
+    function sigmaVerifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _redeemDone = sigmaPoolContract.sigmaVerifyAndRedeemToken(_targetSignature, msg.sender, _tokenAddress, _redeemValue, _nonce);
+        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
+        bool _verifyAndRedeemDone = sigmaPoolContract.verifyAndRedeemToken(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaVerifyAndRedeemToken(msg.sender, _tokenAddress, _redeemValue);
-        _isDone = _redeemDone && _eventDone;
-    }
-
-    /**
-     * @dev Anyone can help to fund this contract with SATIS tokens
-     */
-    function sigmaFundSatisToken(address _tokenAddress, uint256 _fundingValue, string memory _poolName) external returns(bool _isDone) {
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        ISigmaPoolRaw sigmaPoolContract = ISigmaPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _fundingDone = sigmaPoolContract.sigmaFundSatisToken(_tokenAddress, _fundingValue);
-        ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaFundSatisToken(msg.sender, _tokenAddress, _fundingValue);
-        _isDone = _fundingDone && _eventDone;
+        bool _redeemEvent = sigmaActionContract.sigmaVerifyAndRedeemToken(_clientAddress, _tokenAddress, _redeemValue);
+        _isDone = _verifyAndRedeemDone && _redeemEvent;
     }
 }

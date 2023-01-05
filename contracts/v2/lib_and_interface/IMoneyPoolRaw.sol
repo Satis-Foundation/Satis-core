@@ -23,6 +23,11 @@ interface IMoneyPoolRaw {
     function getClientLockBalance(address _clientAddress, address _tokenAddress) external view returns(uint256);
 
     /**
+     * @dev Returns total SATIS token in the contract.
+     */
+    function getSatisTokenAmountInContract(address _tokenAddress) external view returns(uint256);
+
+    /**
      * @dev Returns pool's owner address.
      */
     function getPoolOwner() external view returns(address);
@@ -56,4 +61,9 @@ interface IMoneyPoolRaw {
      * @dev Verify, unlock and remove fund.
      */
     function verifyAndRemoveFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue) external returns(bool);
+
+    /**
+     * @dev Verify and redeem SATIS token in Sigma Mining.
+     */
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _nonce) external returns(bool);
 }

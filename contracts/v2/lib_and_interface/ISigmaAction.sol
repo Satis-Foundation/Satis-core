@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-interface IAction {
+interface ISigmaAction {
 
     /**
      * @dev Emit add fund event
@@ -23,4 +23,9 @@ interface IAction {
      * @dev Emit remove fund event
      */
     function sigmaRemoveFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+
+    /**
+     * @dev Emit redeem fund event
+     */
+    function sigmaVerifyAndRedeemToken(address _clientAddress, address _tokenAddress, uint256 _redeemValue) external returns(bool);
 }
