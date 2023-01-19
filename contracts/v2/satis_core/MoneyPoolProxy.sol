@@ -67,19 +67,19 @@ contract MoneyPoolV2 {
     /**
      * @dev Get client's balance in a pool.
      */
-    function getClientBalance(address _clientAddress, address _tokenAddress, string memory _poolName) external view returns(uint256 clientBalance) {
+    function getClientDepositRecord(address _clientAddress, address _tokenAddress, string memory _poolName) external view returns(uint256 clientDepositRecord) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        clientBalance = poolContract.getClientBalance(_clientAddress, _tokenAddress);
+        clientDepositRecord = poolContract.getClientDepositRecord(_clientAddress, _tokenAddress);
     }
 
     /**
      * @dev Get client's locked balance in a pool.
      */
-    function getClientLockBalance(address _clientAddress, address _tokenAddress, string memory _poolName) external view returns(uint256 clientLockBalance) {
+    function getLiquidityAmountInPool(address _tokenAddress, string memory _poolName) external view returns(uint256 liquidityInPool) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        clientLockBalance = poolContract.getClientLockBalance(_clientAddress, _tokenAddress);
+        liquidityInPool = poolContract.getLiquidityAmountInPool(_tokenAddress);
     }
 
     /**
@@ -150,77 +150,38 @@ contract MoneyPoolV2 {
     }
 
     /**
-     * @dev Transfers fund to this contract
+     * @dev Transfers fund to the pool contract
      */
-    function addFund(address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
+    function addFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _addDone = poolContract.addFund(msg.sender, _tokenAddress, _tokenValue);
+        bool _addDone = poolContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, int256(_tokenValue));
         IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.addFund(msg.sender, _tokenAddress, _tokenValue);
+        bool _eventDone = actionContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
         _isDone = _addDone && _eventDone;
     }
 
     /**
-     * @dev Locks fund within this contract to support trading positoins with optional trading instructions.
+     * @dev Verify signature to withdraw fund instantly
      */
-    function lockFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _lockDone = poolContract.lockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
+        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _nonce);
         IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.lockFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
-        _isDone = _lockDone && _eventDone;
-    }
-
-    /**
-     * @dev Transfers and lock fund within this contract to support trading positions with optional trading instructions.
-     */
-    function addFundWithAction(address _tokenAddress, uint256 _lockValue, uint256 _addValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _addDone = poolContract.addFund(msg.sender, _tokenAddress, _addValue);
-        bool _lockDone = poolContract.lockFundWithAction(msg.sender, _tokenAddress, _lockValue, _data);
-        IAction actionContract = IAction(actionContractAddress);
-        bool _addEvent = actionContract.addFund(msg.sender, _tokenAddress, _addValue);
-        bool _lockEvent = actionContract.lockFundWithAction(msg.sender, _tokenAddress, _lockValue, _data);
-        _isDone = _addDone && _lockDone && _addEvent && _lockEvent;
-    }
-
-    /**
-     * @dev Remove fund from this contract.
-     */
-    function removeFund(address _tokenAddress, uint256 _tokenValue, string memory _poolName) external returns(bool _isDone) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _removeDone = poolContract.removeFund(msg.sender, _tokenAddress, _tokenValue);
-        IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.removeFund(msg.sender, _tokenAddress, _tokenValue);
-        _isDone = _removeDone && _eventDone;
-    }
-
-    /**
-     * @dev Verify signature to unlock fund
-     */
-    function verifyAndUnlockFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue, string memory _poolName) external returns(bool _isDone) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _unlockDone = poolContract.verifyAndUnlockFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _nonce, _newLockValue);
-        IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.unlockFund(msg.sender, _tokenAddress, _unlockValue);
-        _isDone = _unlockDone && _eventDone;
+        bool _eventDone = actionContract.withdrawFund(msg.sender, _tokenAddress, _withdrawValue);
+        _isDone = _withdrawDone && _eventDone;
     }
 
     /**
      * @dev Verify signature to unlock and remove fund in 1 step
      */
-    function verifyAndRemoveFund(bytes memory _targetSignature, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue, string memory _poolName) external returns(bool _isDone) {
+    function verifyAndQueue(bytes memory _targetSignature, address _tokenAddress, uint256 _queueValue, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _verifyAndRemoveDone = poolContract.verifyAndRemoveFund(_targetSignature, msg.sender, _tokenAddress, _unlockValue, _withdrawValue, _nonce, _newLockValue);
+        bool _queueDone = poolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _nonce);
         IAction actionContract = IAction(actionContractAddress);
-        bool _unlockEvent = actionContract.unlockFund(msg.sender, _tokenAddress, _unlockValue);
-        bool _removeEvent = actionContract.removeFund(msg.sender, _tokenAddress, _withdrawValue);
-        _isDone = _verifyAndRemoveDone && _unlockEvent && _removeEvent;
+        bool _eventDone = actionContract.queueWithdraw(msg.sender, _tokenAddress, _queueValue);
+        _isDone = _queueDone && _eventDone;
     }
 }

@@ -7,20 +7,15 @@ interface IAction {
     /**
      * @dev Emit add fund event
      */
-    function addFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) external returns(bool);
 
     /**
-     * @dev Emit lock fund event
+     * @dev Emit queue for withdraw event
      */
-    function lockFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) external returns(bool);
+    function queueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
 
     /**
-     * @dev Emit unlock fund event
+     * @dev Emit instant withdraw fund event
      */
-    function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
-
-    /**
-     * @dev Emit remove fund event
-     */
-    function removeFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+    function withdrawFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
 }
