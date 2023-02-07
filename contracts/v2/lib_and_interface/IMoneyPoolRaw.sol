@@ -45,15 +45,15 @@ interface IMoneyPoolRaw {
     /**
      * @dev Verify and unlock fund.
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _nonce) external returns(bool);
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) external returns(bool);
 
     /**
      * @dev Verify, unlock and remove fund.
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _nonce) external returns(bool);
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _nonce) external returns(bool);
 
     /**
      * @dev Verify and redeem SATIS token in Sigma Mining.
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _nonce) external returns(bool);
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _nonce) external returns(bool);
 }

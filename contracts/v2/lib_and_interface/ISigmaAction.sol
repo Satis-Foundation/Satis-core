@@ -12,12 +12,7 @@ interface ISigmaAction {
     /**
      * @dev Emit unlock fund event
      */
-    function sigmaQueueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
-
-    /**
-     * @dev Emit remove fund event
-     */
-    function sigmaWithdrawFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+    function sigmaQueueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) external returns(bool);
 
     /**
      * @dev Emit redeem fund event

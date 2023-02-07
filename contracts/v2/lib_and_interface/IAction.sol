@@ -12,10 +12,5 @@ interface IAction {
     /**
      * @dev Emit queue for withdraw event
      */
-    function queueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
-
-    /**
-     * @dev Emit instant withdraw fund event
-     */
-    function withdrawFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+    function queueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) external returns(bool);
 }

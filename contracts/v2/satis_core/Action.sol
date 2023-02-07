@@ -13,8 +13,7 @@ contract Action {
     address public proxy;
 
     event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
-    event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
-    event Queue(address clientAddress, address tokenAddress, uint queueValue);
+    event Queue(address clientAddress, address tokenAddress, uint queueValue, uint tier);
 
 
 
@@ -60,16 +59,8 @@ contract Action {
     /**
      * @dev Emit unlock fund event on chain
      */
-    function queueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit Queue(_clientAddress, _tokenAddress, _tokenValue);
-        _isDone = true;
-    }
-
-    /**
-     * @dev Emit remove fund event on chain
-     */
-    function withdrawFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit TransferOut(_clientAddress, _tokenAddress, _tokenValue);
+    function queueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) public isProxy returns(bool _isDone) {
+        emit Queue(_clientAddress, _tokenAddress, _tokenValue, _tier);
         _isDone = true;
     }
 }

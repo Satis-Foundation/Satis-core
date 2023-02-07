@@ -37,7 +37,7 @@ contract MoneyPoolRaw {
 
     event WorkerTakeLockedFund(address workerAddress, address tokenAddress, uint256 takeValue);
     event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
-    event WorkerDumpInstantWithdrawFund(address workerAddress, address _clientAddress, address _tokenAddress, uint256 _instantWithdrawValue);
+    event WorkerDumpInstantWithdrawFund(address workerAddress, address[] _clientAddressList, address _tokenAddress, uint256[] _instantWithdrawValueList);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
@@ -54,17 +54,17 @@ contract MoneyPoolRaw {
         _;
     }
 
-    modifier enoughPoolBalance(address _tokenAddress, uint256[] memory _tokenValueList) {
-        uint256 _sumValue;
-        for (uint256 i = 0; i < _tokenValueList.length; i++) {
-            _sumValue.add(_tokenValueList[i]);
-        }
-        require (
-            _sumValue <= totalLockedAssets[_tokenAddress],
-            "Not enough assets in pool"
-        );
-        _;
-    }
+    // modifier enoughPoolBalance(address _tokenAddress, uint256[] memory _tokenValueList) {
+    //     uint256 _sumValue;
+    //     for (uint256 i = 0; i < _tokenValueList.length; i++) {
+    //         _sumValue.add(_tokenValueList[i]);
+    //     }
+    //     require (
+    //         _sumValue <= totalLockedAssets[_tokenAddress],
+    //         "Not enough assets in pool"
+    //     );
+    //     _;
+    // }
 
     modifier enoughInstantWithdrawReserve(address _clientAddress, address _tokenAddress, uint256 _tokenValue) {
         require (instantWithdrawReserve[_clientAddress][_tokenAddress] >= _tokenValue, "Insufficient token in instant withdrawal reserve");
@@ -121,6 +121,28 @@ contract MoneyPoolRaw {
      */
     function getSatisTokenAmountInPool(address _tokenAddress) public view returns(uint256) {
         return satisTokenBalance[_tokenAddress];
+    }
+
+    /**
+     * @dev Returns client's queued value.
+     */
+    function getClientQueueValue(address[] memory _clientAddressList, address _tokenAddress) public view returns(uint256[] memory) {
+        uint256[] memory queueValueList = new uint256[](_clientAddressList.length);
+        for (uint i = 0; i < _clientAddressList.length; i++) {
+            queueValueList[i] = (withdrawalQueue[_clientAddressList[i]][_tokenAddress]);
+        }
+        return queueValueList;
+    }
+
+    /**
+     * @dev Returns client's fast lane value.
+     */
+    function getClientInstantWithdrawReserve(address[] memory _clientAddressList, address _tokenAddress) public view returns(uint256[] memory) {
+        uint256[] memory reserveValueList = new uint256[](_clientAddressList.length);
+        for (uint i = 0; i < _clientAddressList.length; i++) {
+            reserveValueList[i] = (instantWithdrawReserve[_clientAddressList[i]][_tokenAddress]);
+        }
+        return reserveValueList;
     }
 
     /**
@@ -280,10 +302,11 @@ contract MoneyPoolRaw {
     /**
      * @dev Worker unlock fund to instant withdrawal reserve.
      */
-    function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) public isWorker enoughPoolBalance(_tokenAddress, _tokenValueList) returns(bool _isDone) {
+    function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) public isWorker returns(bool _isDone) {
+        IERC20 unlockToken = IERC20(_tokenAddress);
         for (uint i = 0; i < _clientAddressList.length; i++) {
+            unlockToken.safeTransfer(_clientAddressList[i], _tokenValueList[i]);
             instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] = instantWithdrawReserve[_clientAddressList[i]][_tokenAddress].add(_tokenValueList[i]);
-            totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_tokenValueList[i]);
         }
         _isDone = true;
     }
@@ -292,13 +315,14 @@ contract MoneyPoolRaw {
       string sender;
       string token;
       string withdraw;
+      string tier;
       string nonce;
     }
 
     /**
      * @dev Verify signature, internal function
      */
-    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _nonce) internal view returns(bool _isDone) {
+    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) internal view returns(bool _isDone) {
         require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
         bytes32 _matchHash;
         bytes32 _hashForRecover;
@@ -307,8 +331,9 @@ contract MoneyPoolRaw {
         str.sender = address2str(_clientAddress);
         str.token = address2str(_tokenAddress);
         str.withdraw = uint2str(_withdrawValue);
+        str.tier = uint2str(_tier);
         str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encodePacked(str.nonce, str.sender, str.token, str.withdraw));
+        _matchHash = keccak256(abi.encodePacked(str.nonce, str.sender, str.token, str.withdraw, str.tier));
         _hashForRecover = hashingMessage(_matchHash);
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         require (_recoveredAddress == owner, "Incorrect signature");
@@ -316,25 +341,23 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Verify signature to unlock fund
+     * @dev Tier 1 withdrawal
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _nonce) public 
-    isProxy enoughInstantWithdrawReserve(_clientAddress, _tokenAddress, _withdrawValue) returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _nonce);
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) public isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
         clientNonce[_clientAddress] = _nonce.add(1);
 
-        IERC20 withdrawToken = IERC20(_tokenAddress);
-        withdrawToken.safeTransfer(_clientAddress, _withdrawValue);
-        instantWithdrawReserve[_clientAddress][_tokenAddress] = instantWithdrawReserve[_clientAddress][_tokenAddress].sub(_withdrawValue);
+        instantWithdrawReserve[_clientAddress][_tokenAddress] = instantWithdrawReserve[_clientAddress][_tokenAddress].add(_withdrawValue);
+        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_withdrawValue);
         _isDone = true;
     }
 
     /**
-     * @dev Verify signature to unlock and remove fund in 1 step
+     * @dev Tier 2 withdrawal
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _nonce) public isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _nonce);
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _nonce) public isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _nonce);
         require (_verification, "Signature verification for queuing fails");
         clientNonce[_clientAddress] = _nonce.add(1);
 
@@ -346,8 +369,8 @@ contract MoneyPoolRaw {
     /**
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _nonce) external isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _nonce);
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _nonce) external isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
         clientNonce[_clientAddress] = _nonce.add(1);
@@ -391,7 +414,7 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Worker dumping crosschain fund from bridge.
+     * @dev Worker dumping crosschain fund from rebalancing.
      */
     function workerDumpRebalancedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _rebalanceAmount) external 
     isWorker correctRebalanceValue(_queueValueList, _totalDumpAmount, _rebalanceAmount) returns(bool _isDone) {
@@ -418,15 +441,15 @@ contract MoneyPoolRaw {
     /**
      * @dev Worker dumping fund for instant withdrawal.
      */
-    function workerDumpInstantWithdrawalFund(address _clientAddress, address _tokenAddress, uint256 _instantWithdrawValue) external isWorker returns(bool _isDone) {
+    function workerDumpInstantWithdrawalFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _instantWithdrawValueList, uint256 _totalDumpAmount) external 
+    isWorker correctRebalanceValue(_instantWithdrawValueList, _totalDumpAmount, 0) returns(bool _isDone) {
         IERC20 dumpToken = IERC20(_tokenAddress);
-        dumpToken.safeTransferFrom(msg.sender, address(this), _instantWithdrawValue);
-        instantWithdrawReserve[_clientAddress][_tokenAddress] = instantWithdrawReserve[_clientAddress][_tokenAddress].add(_instantWithdrawValue);
-        emit WorkerDumpInstantWithdrawFund(msg.sender, _clientAddress, _tokenAddress, _instantWithdrawValue);
+        dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
+        for (uint256 i=0; i < _clientAddressList.length; i++) {
+            dumpToken.safeTransfer(_clientAddressList[i], _instantWithdrawValueList[i]);
+            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] = instantWithdrawReserve[_clientAddressList[i]][_tokenAddress].sub(_instantWithdrawValueList[i]);
+        }
+        emit WorkerDumpInstantWithdrawFund(msg.sender, _clientAddressList, _tokenAddress, _instantWithdrawValueList);
         _isDone = true;
     }
-    /**
-     * @dev Cancel tier 2 withdrawal before rebalancing epoch.
-     */
-    //function cancelQueue()
 }
