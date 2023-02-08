@@ -25,7 +25,13 @@ interface IMoneyPoolRaw {
     /**
      * @dev Returns total SATIS token in the contract.
      */
-    function getSatisTokenAmountInContract(address _tokenAddress) external view returns(uint256);
+    function getSatisTokenAmountInPool(address _tokenAddress) external view returns(uint256);
+
+    function getClientQueueValue(address[] memory _clientAddressList, address _tokenAddress) external view returns(uint256[] memory);
+
+    function getClientInstantWithdrawReserve(address[] memory _clientAddressList, address _tokenAddress) external view returns(uint256[] memory);
+
+    function getQueueCount(address _tokenAddress) external view returns(uint256);
 
     /**
      * @dev Returns pool's owner address.
@@ -45,15 +51,15 @@ interface IMoneyPoolRaw {
     /**
      * @dev Verify and unlock fund.
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) external returns(bool);
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) external returns(bool _isDone);
 
     /**
      * @dev Verify, unlock and remove fund.
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _nonce) external returns(bool);
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _nonce) external returns(bool _isDone);
 
     /**
      * @dev Verify and redeem SATIS token in Sigma Mining.
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _nonce) external returns(bool);
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _nonce) external returns(bool _isDone);
 }
