@@ -27,6 +27,7 @@ contract MoneyPoolRaw {
     mapping (address => uint256) public totalLockedAssets;
     mapping (address => mapping (address => uint256)) public instantWithdrawReserve;
     mapping (address => mapping (address => uint256)) public withdrawalQueue;
+    mapping (address => uint256) public queueCount;
     mapping (address => uint256) public clientNonce;
     mapping (address => uint256) public satisTokenBalance;
     mapping (address => bool) public workerList;
@@ -143,6 +144,13 @@ contract MoneyPoolRaw {
             reserveValueList[i] = (instantWithdrawReserve[_clientAddressList[i]][_tokenAddress]);
         }
         return reserveValueList;
+    }
+
+    /**
+     * @dev Returns current queue count of a token.
+     */
+    function getQueueCount(address _tokenAddress) external view returns(uint256) {
+        return queueCount[_tokenAddress];
     }
 
     /**
@@ -360,6 +368,7 @@ contract MoneyPoolRaw {
         bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _nonce);
         require (_verification, "Signature verification for queuing fails");
         clientNonce[_clientAddress] = _nonce.add(1);
+        queueCount[_tokenAddress] += 1;
 
         withdrawalQueue[_clientAddress][_tokenAddress] = withdrawalQueue[_clientAddress][_tokenAddress].add(_queueValue);
         totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_queueValue);
@@ -433,6 +442,13 @@ contract MoneyPoolRaw {
                 withdrawalQueue[_clientAddressList[i]][_tokenAddress] = withdrawalQueue[_clientAddressList[i]][_tokenAddress].sub(_queueValueList[i]);
             }
             emit WorkerDumpBridgedFund(msg.sender, _clientAddressList, _tokenAddress, _queueValueList);
+        }
+
+        // Reset queue count
+        if (_clientAddressList.length >= queueCount[_tokenAddress]) {
+            queueCount[_tokenAddress] = 0;
+        } else {
+            queueCount[_tokenAddress] -= _clientAddressList.length;
         }
 
         _isDone = true;
