@@ -39,6 +39,7 @@ contract MoneyPoolRaw {
     event WorkerTakeLockedFund(address workerAddress, address tokenAddress, uint256 takeValue);
     event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
     event WorkerDumpInstantWithdrawFund(address workerAddress, address[] _clientAddressList, address _tokenAddress, uint256[] _instantWithdrawValueList);
+    event OwnerTakeProfit(address tokenAddress, uint256 takeProfitValue);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
@@ -209,8 +210,9 @@ contract MoneyPoolRaw {
     /**
      * @dev Transfers and lock fund within this contract to support trading positions with optional trading instructions.
      */
-    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue, int256 _recordAddValue) external isProxy returns(bool _isDone) {
+    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue) external isProxy returns(bool _isDone) {
         IERC20 depositToken = IERC20(_tokenAddress);
+        int256 _recordAddValue = int256(_addValue);
         depositToken.safeTransferFrom(_clientAddress, address(this), _addValue);
         clientDepositRecord[_clientAddress][_tokenAddress] += _recordAddValue;
         totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].add(_addValue);
@@ -358,6 +360,10 @@ contract MoneyPoolRaw {
 
         instantWithdrawReserve[_clientAddress][_tokenAddress] = instantWithdrawReserve[_clientAddress][_tokenAddress].add(_withdrawValue);
         totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_withdrawValue);
+
+        int256 _recordWithdrawValue = int256(_withdrawValue);
+        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordWithdrawValue;
+
         _isDone = true;
     }
 
@@ -372,6 +378,10 @@ contract MoneyPoolRaw {
 
         withdrawalQueue[_clientAddress][_tokenAddress] = withdrawalQueue[_clientAddress][_tokenAddress].add(_queueValue);
         totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_queueValue);
+
+        int256 _recordQueueValue = int256(_queueValue);
+        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordQueueValue;
+
         _isDone = true;
     }
 
@@ -415,6 +425,7 @@ contract MoneyPoolRaw {
      * @dev Worker taking locked fund for bridging.
      */
     function workerTakeLockedFund(address _tokenAddress, uint256 _takeValue) external isWorker returns(bool _isDone) {
+        require(_takeValue <= totalLockedAssets[_tokenAddress]);
         IERC20 takeToken = IERC20(_tokenAddress);
         totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_takeValue);
         takeToken.safeTransfer(msg.sender, _takeValue);
@@ -466,6 +477,18 @@ contract MoneyPoolRaw {
             instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] = instantWithdrawReserve[_clientAddressList[i]][_tokenAddress].sub(_instantWithdrawValueList[i]);
         }
         emit WorkerDumpInstantWithdrawFund(msg.sender, _clientAddressList, _tokenAddress, _instantWithdrawValueList);
+        _isDone = true;
+    }
+
+    /**
+     * @dev Owner taking profits (charged withdrawal fees).
+     */
+    function ownerTakeProfit(address _tokenAddress, uint256 _takeProfitValue) external isOwner returns(bool _isDone) {
+        require(_takeProfitValue <= totalLockedAssets[_tokenAddress], "Not enough balance to take");
+        IERC20 profitToken = IERC20(_tokenAddress);
+        profitToken.safeTransfer(msg.sender, _takeProfitValue);
+        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_takeProfitValue);
+        emit OwnerTakeProfit(_tokenAddress, _takeProfitValue);
         _isDone = true;
     }
 }
