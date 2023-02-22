@@ -154,8 +154,13 @@ contract MoneyPoolV2 {
      */
     function addFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _addDone = poolContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, int256(_tokenValue));
+        bool _addDone = false;
+        if (_tokenValue > 0) {
+            IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
+            _addDone = poolContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, int256(_tokenValue));
+        } else {
+            _addDone = true;
+        }
         IAction actionContract = IAction(actionContractAddress);
         bool _eventDone = actionContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
         _isDone = _addDone && _eventDone;
