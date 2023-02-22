@@ -12,10 +12,8 @@ contract Action {
     address public owner;
     address public proxy;
 
-    event TransferIn(address clientAddress, address tokenAddress, uint transactionValue);
-    event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
-    event Lock(address clientAddress, address tokenAddress, uint transactionValue, string transactionData);
-    event Unlock(address clientAddress, address tokenAddress, uint transactionValue);
+    event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
+    event Queue(address clientAddress, address tokenAddress, uint queueValue, uint tier);
 
 
 
@@ -53,32 +51,16 @@ contract Action {
     /**
      * @dev Emit add fund event on chain
      */
-    function addFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit TransferIn(_clientAddress, _tokenAddress, _tokenValue);
-        _isDone = true;
-    }
-
-    /**
-     * @dev Emit lock fund event on chain
-     */
-    function lockFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) public isProxy returns(bool _isDone) {
-        emit Lock(_clientAddress, _tokenAddress, _tokenValue, _data);
+    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) public isProxy returns(bool _isDone) {
+        emit TransferIn(_clientAddress, _tokenAddress, _tokenValue, _data);
         _isDone = true;
     }
 
     /**
      * @dev Emit unlock fund event on chain
      */
-    function unlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
-        _isDone = true;
-    }
-
-    /**
-     * @dev Emit remove fund event on chain
-     */
-    function removeFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit TransferOut(_clientAddress, _tokenAddress, _tokenValue);
+    function queueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) public isProxy returns(bool _isDone) {
+        emit Queue(_clientAddress, _tokenAddress, _tokenValue, _tier);
         _isDone = true;
     }
 }

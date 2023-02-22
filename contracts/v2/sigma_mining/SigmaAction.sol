@@ -12,10 +12,8 @@ contract SigmaAction {
     address public owner;
     address public proxy;
 
-    event TransferIn(address clientAddress, address tokenAddress, uint transactionValue);
-    event TransferOut(address clientAddress, address tokenAddress, uint transactionValue);
-    event Lock(address clientAddress, address tokenAddress, uint transactionValue, string transactionData);
-    event Unlock(address clientAddress, address tokenAddress, uint transactionValue);
+    event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
+    event Queue(address clientAddress, address tokenAddress, uint queueValue, uint256 tier);
     event RedeemToken(address clientAddress, address tokenAddress, uint transactionValue);
 
 
@@ -50,44 +48,28 @@ contract SigmaAction {
     }
 
     /**
-     * @dev Emit add fund event on chain
+     * @dev Emit transfer in event on chain
      */
-    function sigmaAddFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit TransferIn(_clientAddress, _tokenAddress, _tokenValue);
+    function sigmaAddFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) public isProxy returns(bool _isDone) {
+        emit TransferIn(_clientAddress, _tokenAddress, _tokenValue, _data);
         _isDone = true;
     }
 
     /**
-     * @dev Emit lock fund event on chain
+     * @dev Emit queue event on chain
      */
-    function sigmaLockFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) public isProxy returns(bool _isDone) {
-        emit Lock(_clientAddress, _tokenAddress, _tokenValue, _data);
-        _isDone = true;
-    }
-
-    /**
-     * @dev Emit unlock fund event on chain
-     */
-    function sigmaUnlockFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit Unlock(_clientAddress, _tokenAddress, _tokenValue);
-        _isDone = true;
-    }
-
-    /**
-     * @dev Emit remove fund event on chain
-     */
-    function sigmaRemoveFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit TransferOut(_clientAddress, _tokenAddress, _tokenValue);
+    function sigmaQueueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) public isProxy returns(bool _isDone) {
+        emit Queue(_clientAddress, _tokenAddress, _tokenValue, _tier);
         _isDone = true;
     }
 
     /**
      * @dev Fund SATIS token
-     */
     function sigmaFundSatisToken(address _funderAddress, address _tokenAddress, uint256 _fundingValue) public isProxy returns(bool _isDone) {
         emit TransferIn(_funderAddress, _tokenAddress, _fundingValue);
         _isDone = true;
     }
+    */
 
     /**
      * @dev Redeem mined token

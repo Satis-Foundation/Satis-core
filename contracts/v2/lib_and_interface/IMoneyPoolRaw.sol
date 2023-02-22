@@ -15,17 +15,23 @@ interface IMoneyPoolRaw {
     /**
      * @dev Returns client's balance.
      */
-    function getClientBalance(address _clientAddress, address _tokenAddress) external view returns(uint256);
+    function getClientDepositRecord(address _clientAddress, address _tokenAddress) external view returns(uint256);
 
     /**
      * @dev Returns client's locked balance.
      */
-    function getClientLockBalance(address _clientAddress, address _tokenAddress) external view returns(uint256);
+    function getLiquidityAmountInPool(address _tokenAddress) external view returns(uint256);
 
     /**
      * @dev Returns total SATIS token in the contract.
      */
-    function getSatisTokenAmountInContract(address _tokenAddress) external view returns(uint256);
+    function getSatisTokenAmountInPool(address _tokenAddress) external view returns(uint256);
+
+    function getClientQueueValue(address[] memory _clientAddressList, address _tokenAddress) external view returns(uint256[] memory);
+
+    function getClientInstantWithdrawReserve(address[] memory _clientAddressList, address _tokenAddress) external view returns(uint256[] memory);
+
+    function getQueueCount(address _tokenAddress) external view returns(uint256);
 
     /**
      * @dev Returns pool's owner address.
@@ -33,37 +39,27 @@ interface IMoneyPoolRaw {
     function getPoolOwner() external view returns(address);
 
     /**
-     * @dev Transfer fund.
+     * @dev Verify if an address is a worker.
      */
-    function addFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
-
-    /**
-     * @dev Lock fund.
-     */
-    function lockFundWithAction(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) external returns(bool);
+    function verifyWorker(address _workerAddress) external view returns(bool);
 
     /**
      * @dev Add and lock fund.
      */
-    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _lockValue, uint256 _addValue, string memory _data) external returns(bool);
-
-    /**
-     * @dev Remove fund.
-     */
-    function removeFund(address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue, int256 _recordAddValue) external returns(bool);
 
     /**
      * @dev Verify and unlock fund.
      */
-    function verifyAndUnlockFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _nonce, uint256 _newLockValue) external returns(bool);
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) external returns(bool _isDone);
 
     /**
      * @dev Verify, unlock and remove fund.
      */
-    function verifyAndRemoveFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _unlockValue, uint256 _withdrawValue, uint256 _nonce, uint256 _newLockValue) external returns(bool);
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _nonce) external returns(bool _isDone);
 
     /**
      * @dev Verify and redeem SATIS token in Sigma Mining.
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _nonce) external returns(bool);
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _nonce) external returns(bool _isDone);
 }
