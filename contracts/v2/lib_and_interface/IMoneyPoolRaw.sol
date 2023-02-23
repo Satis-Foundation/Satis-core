@@ -46,7 +46,7 @@ interface IMoneyPoolRaw {
     /**
      * @dev Add and lock fund.
      */
-    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue, int256 _recordAddValue) external returns(bool);
+    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue) external returns(bool);
 
     /**
      * @dev Verify and unlock fund.

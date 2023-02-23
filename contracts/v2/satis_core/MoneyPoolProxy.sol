@@ -157,7 +157,7 @@ contract MoneyPoolV2 {
         bool _addDone = false;
         if (_tokenValue > 0) {
             IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-            _addDone = poolContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, int256(_tokenValue));
+            _addDone = poolContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue);
         } else {
             _addDone = true;
         }
