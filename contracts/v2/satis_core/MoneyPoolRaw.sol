@@ -91,6 +91,8 @@ contract MoneyPoolRaw {
      * @dev Sets the value for {owner}, owner is also a worker.
      */
     constructor(address _initialProxyAddress, address _initialSigmaProxyAddress) {
+        require(_initialProxyAddress != address(0), "Zero address for proxy");
+        require(_initialSigmaProxyAddress != address(0), "Zero address for sigma proxy");
         owner = msg.sender;
         workerList[owner] = true;
         proxy = _initialProxyAddress;
@@ -158,6 +160,7 @@ contract MoneyPoolRaw {
      * @dev Transfer the ownership of this contract.
      */
     function transferOwnership(address _newOwner) public isOwner {
+        require(_newOwner != address(0), "Zero address for new owner");
         owner = _newOwner;
     }
 
@@ -183,6 +186,7 @@ contract MoneyPoolRaw {
      * @dev Update proxy contract address.
      */
     function updateProxyAddress(address _newProxyAddress) public isWorker {
+        require(_newProxyAddress != address(0), "Zero address for new proxy");
         proxy = _newProxyAddress;
     }
 
@@ -190,6 +194,7 @@ contract MoneyPoolRaw {
      * @dev Update sigma mining proxy contract address.
      */
     function updateSigmaProxyAddress(address _newSigmaProxyAddress) public isWorker {
+        require(_newSigmaProxyAddress != address(0), "Zero address for new sigma proxy");
         sigmaProxy = _newSigmaProxyAddress;
     }
 

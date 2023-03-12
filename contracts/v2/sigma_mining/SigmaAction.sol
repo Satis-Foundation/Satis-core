@@ -29,6 +29,7 @@ contract SigmaAction {
 
 
     constructor(address _initialProxyAddress) {
+        require(_initialProxyAddress != address(0), "Zero address for sigma proxy");
         owner = msg.sender;
         proxy = _initialProxyAddress;
     }
@@ -37,6 +38,7 @@ contract SigmaAction {
      * @dev Transfer ownership of this contract
      */
     function transferOwnership(address _newOwner) public isOwner {
+        require(_newOwner != address(0), "Zero address for new sigma action owner");
         owner = _newOwner;
     }
 
@@ -44,6 +46,7 @@ contract SigmaAction {
      * @dev Reset proxy contract address
      */
     function updateProxyAddress(address _newProxyAddress) public isOwner {
+        require(_newProxyAddress != address(0), "Zero address for new sigma proxy");
         proxy = _newProxyAddress;
     }
 

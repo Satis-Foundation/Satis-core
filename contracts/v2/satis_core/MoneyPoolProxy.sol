@@ -46,6 +46,7 @@ contract MoneyPoolV2 {
      * @dev Sets the value for {owner}, {workerList} and {poolList}
      */
     constructor(string[] memory _poolNameList, address[] memory _poolAddressList, address _actionContractAddress) {
+        require(_actionContractAddress != address(0), "Zero address for action contract");
         require(_poolNameList.length == _poolAddressList.length, "Lists' length is different");
         owner = msg.sender;
         workerList[owner] = true;
@@ -109,6 +110,7 @@ contract MoneyPoolV2 {
      * @dev Transfer the ownership of this contract.
      */
     function transferOwnershipMoneyPoolProxy(address _newOwner) external isOwner {
+        require(_newOwner != address(0), "Zero address for new owner");
         owner = _newOwner;
         emit ChangeOwnership(owner);
     }
@@ -146,6 +148,7 @@ contract MoneyPoolV2 {
      * @dev Change action contract address for new event output format.
      */
     function changeActionContract(address _newActionContractAddress) external isWorker {
+        require(_newActionContractAddress != address(0), "Zero address for new action contract");
         actionContractAddress = _newActionContractAddress;
     }
 

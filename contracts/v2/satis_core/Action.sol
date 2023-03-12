@@ -30,6 +30,7 @@ contract Action {
 
 
     constructor(address _initialProxyAddress) {
+        require(_initialProxyAddress != address(0), "Zero address for proxy");
         owner = msg.sender;
         proxy = _initialProxyAddress;
     }
@@ -38,6 +39,7 @@ contract Action {
      * @dev Transfer ownership of this contract
      */
     function transferOwnership(address _newOwner) public isOwner {
+        require(_newOwner != address(0), "Zero address for new owner");
         owner = _newOwner;
     }
 
@@ -45,6 +47,7 @@ contract Action {
      * @dev Reset proxy contract address
      */
     function updateProxyAddress(address _newProxyAddress) public isOwner {
+        require(_newProxyAddress != address(0), "Zero address for new proxy");
         proxy = _newProxyAddress;
     }
 

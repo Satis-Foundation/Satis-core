@@ -54,6 +54,7 @@ contract SigmaPoolV2 {
      * @dev Sets the value for {owner}
      */
     constructor(string[] memory _sigmaPoolNameList, address[] memory _sigmaPoolAddressList, address _sigmaActionContractAddress) {
+        require(_sigmaActionContractAddress != address(0), "Zero address for sigma action contract");
         require(_sigmaPoolNameList.length == _sigmaPoolAddressList.length, "Lists' length is different");
         sigmaOwner = msg.sender;
         sigmaProxyWorkerList[sigmaOwner] = true;
@@ -119,6 +120,7 @@ contract SigmaPoolV2 {
      * @dev Transfer the ownership of this contract.
      */
     function transferOwnershipSigmaPoolProxy(address _newOwner) external isOwner {
+        require(_newOwner != address(0), "Zero address for new sigma owner");
         sigmaOwner = _newOwner;
         emit ChangeOwnership(sigmaOwner);
     }
@@ -160,6 +162,7 @@ contract SigmaPoolV2 {
      * @dev Change sigma event emission contract
      */
     function changeSigmaActionContract(address _newActionContractAddress) external isWorker {
+        require(_newActionContractAddress != address(0), "Zero address for new sigma action contract");
         sigmaActionContractAddress = _newActionContractAddress;
     }
 
