@@ -313,10 +313,11 @@ contract MoneyPoolRaw {
      * @dev Worker unlock fund to instant withdrawal reserve.
      */
     function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) public isWorker returns(bool _isDone) {
-        IERC20 unlockToken = IERC20(_tokenAddress);
         for (uint i = 0; i < _clientAddressList.length; i++) {
-            unlockToken.safeTransfer(_clientAddressList[i], _tokenValueList[i]);
             instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] = instantWithdrawReserve[_clientAddressList[i]][_tokenAddress].add(_tokenValueList[i]);
+            totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_tokenValueList[i]);
+            int256 _recordWithdrawValue = int256(_tokenValueList[i]);
+            clientDepositRecord[_clientAddressList[i]][_tokenAddress] -= _recordWithdrawValue;
         }
         _isDone = true;
     }
