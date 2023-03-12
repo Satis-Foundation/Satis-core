@@ -72,7 +72,7 @@ contract MoneyPoolRaw {
     }
 
     modifier correctSignatureLength(bytes memory _targetSignature) {
-        require (_targetSignature.length == 65, "Incorrect signature length");
+        require (_targetSignature.length == 65, "Incorrect signature length, length must be 65");
         _;
     }
 
@@ -227,8 +227,6 @@ contract MoneyPoolRaw {
         bytes32 _r;
         bytes32 _s;
         uint8 _v;
-
-        require (_targetSignature.length == 65, "Length of signature must be 65");
 
         assembly {
             /*
