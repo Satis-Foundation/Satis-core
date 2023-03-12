@@ -56,23 +56,6 @@ contract MoneyPoolRaw {
         _;
     }
 
-    // modifier enoughPoolBalance(address _tokenAddress, uint256[] memory _tokenValueList) {
-    //     uint256 _sumValue;
-    //     for (uint256 i = 0; i < _tokenValueList.length; i++) {
-    //         _sumValue.add(_tokenValueList[i]);
-    //     }
-    //     require (
-    //         _sumValue <= totalLockedAssets[_tokenAddress],
-    //         "Not enough assets in pool"
-    //     );
-    //     _;
-    // }
-
-    modifier enoughInstantWithdrawReserve(address _clientAddress, address _tokenAddress, uint256 _tokenValue) {
-        require (instantWithdrawReserve[_clientAddress][_tokenAddress] >= _tokenValue, "Insufficient token in instant withdrawal reserve");
-        _;
-    }
-
     modifier correctRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _rebalanceAmount) {
         uint256 _queueValue;
         for (uint256 i = 0; i < _queueValueList.length; i++) {
