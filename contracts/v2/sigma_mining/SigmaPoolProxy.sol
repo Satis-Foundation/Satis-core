@@ -39,6 +39,8 @@ contract SigmaPoolV2 {
      */
     event ChangeOwnership(address newAdminAddress);
     event ChangePoolAddress(address[] newlyAddedPoolAddressList);
+    event AddWorkers(address[] addWorkerList);
+    event RemoveWorkers(address[] removeWorkerList);
 
     modifier isOwner() {
         require (msg.sender == sigmaOwner, "Not an admin");
@@ -134,6 +136,7 @@ contract SigmaPoolV2 {
         for(uint256 i=0; i < _addWorkerList.length; i++) {
             sigmaProxyWorkerList[_addWorkerList[i]] = true;
         }
+        emit AddWorkers(_addWorkerList);
     }
 
     /**
@@ -143,6 +146,7 @@ contract SigmaPoolV2 {
         for(uint256 i=0; i < _removeWorkerList.length; i++) {
             sigmaProxyWorkerList[_removeWorkerList[i]] = false;
         }
+        emit RemoveWorkers(_removeWorkerList);
     }
 
     function verifySigmaProxyWorker(address _workerAddress) external view returns(bool _isWorker) {

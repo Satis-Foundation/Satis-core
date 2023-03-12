@@ -31,6 +31,8 @@ contract MoneyPoolV2 {
      */
     event ChangeOwnership(address newAdminAddress);
     event ChangePoolAddress(address[] newlyAddedPoolAddressList);
+    event AddWorkers(address[] addWorkerList);
+    event RemoveWorkers(address[] removeWorkerList);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
@@ -124,6 +126,7 @@ contract MoneyPoolV2 {
         for(uint256 i=0; i < _addWorkerList.length; i++) {
             workerList[_addWorkerList[i]] = true;
         }
+        emit AddWorkers(_addWorkerList);
     }
 
     /**
@@ -133,6 +136,7 @@ contract MoneyPoolV2 {
         for(uint256 i=0; i < _removeWorkerList.length; i++) {
             workerList[_removeWorkerList[i]] = false;
         }
+        emit RemoveWorkers(_removeWorkerList);
     }
 
     /**

@@ -15,7 +15,8 @@ contract SigmaAction {
     event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
     event Queue(address clientAddress, address tokenAddress, uint queueValue, uint256 tier);
     event RedeemToken(address clientAddress, address tokenAddress, uint transactionValue);
-
+    event ChangeOwnership(address newOwner);
+    event ChangeSigmaProxy(address newSigmaProxy);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
@@ -40,6 +41,7 @@ contract SigmaAction {
     function transferOwnership(address _newOwner) public isOwner {
         require(_newOwner != address(0), "Zero address for new sigma action owner");
         owner = _newOwner;
+        emit ChangeOwnership(_newOwner);
     }
 
     /**
@@ -48,6 +50,7 @@ contract SigmaAction {
     function updateProxyAddress(address _newProxyAddress) public isOwner {
         require(_newProxyAddress != address(0), "Zero address for new sigma proxy");
         proxy = _newProxyAddress;
+        emit ChangeSigmaProxy(_newProxyAddress);
     }
 
     /**

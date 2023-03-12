@@ -41,6 +41,12 @@ contract MoneyPoolRaw {
     event WorkerDumpInstantWithdrawFund(address workerAddress, address[] _clientAddressList, address _tokenAddress, uint256[] _instantWithdrawValueList);
     event OwnerTakeProfit(address tokenAddress, uint256 takeProfitValue);
 
+    event ChangeOwnership(address newOwner);
+    event AddWorkers(address[] addWorkerList);
+    event RemoveWorkers(address[] removeWorkerList);
+    event ChangeProxy(address newProxy);
+    event ChangeSigmaProxy(address newSigmaProxy);
+
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
         _;
@@ -147,6 +153,7 @@ contract MoneyPoolRaw {
         workerList[owner] = false;
         owner = _newOwner;
         workerList[owner] = true;
+        emit ChangeOwnership(_newOwner);
     }
 
     /**
@@ -156,6 +163,7 @@ contract MoneyPoolRaw {
         for(uint256 i=0; i < _addWorkerList.length; i++) {
             workerList[_addWorkerList[i]] = true;
         }
+        emit AddWorkers(_addWorkerList);
     }
 
     /**
@@ -165,6 +173,7 @@ contract MoneyPoolRaw {
         for(uint256 i=0; i < _removeWorkerList.length; i++) {
             workerList[_removeWorkerList[i]] = false;
         }
+        emit RemoveWorkers(_removeWorkerList);
     }
 
     /**
@@ -173,6 +182,7 @@ contract MoneyPoolRaw {
     function updateProxyAddress(address _newProxyAddress) public isWorker {
         require(_newProxyAddress != address(0), "Zero address for new proxy");
         proxy = _newProxyAddress;
+        emit ChangeProxy(_newProxyAddress);
     }
 
     /**
@@ -181,6 +191,7 @@ contract MoneyPoolRaw {
     function updateSigmaProxyAddress(address _newSigmaProxyAddress) public isWorker {
         require(_newSigmaProxyAddress != address(0), "Zero address for new sigma proxy");
         sigmaProxy = _newSigmaProxyAddress;
+        emit ChangeSigmaProxy(_newSigmaProxyAddress);
     }
 
     /**

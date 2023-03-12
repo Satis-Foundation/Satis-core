@@ -14,6 +14,8 @@ contract Action {
 
     event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
     event Queue(address clientAddress, address tokenAddress, uint queueValue, uint tier);
+    event ChangeOwnership(address newOwner);
+    event ChangeProxy(address newProxy);
 
 
 
@@ -41,6 +43,7 @@ contract Action {
     function transferOwnership(address _newOwner) public isOwner {
         require(_newOwner != address(0), "Zero address for new owner");
         owner = _newOwner;
+        emit ChangeOwnership(_newOwner);
     }
 
     /**
@@ -49,6 +52,7 @@ contract Action {
     function updateProxyAddress(address _newProxyAddress) public isOwner {
         require(_newProxyAddress != address(0), "Zero address for new proxy");
         proxy = _newProxyAddress;
+        emit ChangeProxy(_newProxyAddress);
     }
 
     /**
