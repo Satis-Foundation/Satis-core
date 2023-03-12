@@ -96,7 +96,7 @@ contract SigmaPoolV2 {
     function getSatisTokenAmountInContract(address _tokenAddress, string memory _poolName) public view returns(uint256 satisTokenInPool) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        satisTokenInPool = sigmaPoolContract.getSatisTokenAmountInContract(_tokenAddress);
+        satisTokenInPool = sigmaPoolContract.getSatisTokenAmountInPool(_tokenAddress);
     }
 
     /**
@@ -169,7 +169,7 @@ contract SigmaPoolV2 {
     function sigmaAddFundWithAction(address _tokenAddress, uint256 _tokenValue, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _addDone = sigmaPoolContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, int(_tokenValue));
+        bool _addDone = sigmaPoolContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _eventDone = sigmaActionContract.sigmaAddFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
         _isDone = _addDone && _eventDone;
