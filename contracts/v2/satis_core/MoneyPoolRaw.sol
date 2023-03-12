@@ -78,7 +78,7 @@ contract MoneyPoolRaw {
         for (uint256 i = 0; i < _queueValueList.length; i++) {
             _queueValue.add(_queueValueList[i]);
         }
-        require (_totalDumpAmount - _rebalanceAmount == _queueValue);
+        require (_totalDumpAmount - _rebalanceAmount == _queueValue, "Dump value - rebalance amount != queue value sum");
         _;
     }
 
@@ -433,7 +433,7 @@ contract MoneyPoolRaw {
      * @dev Worker taking locked fund for bridging.
      */
     function workerTakeLockedFund(address _tokenAddress, uint256 _takeValue) external isWorker returns(bool _isDone) {
-        require(_takeValue <= totalLockedAssets[_tokenAddress]);
+        require(_takeValue <= totalLockedAssets[_tokenAddress], "Taking more than the locked assets in contract");
         IERC20 takeToken = IERC20(_tokenAddress);
         totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_takeValue);
         takeToken.safeTransfer(msg.sender, _takeValue);
