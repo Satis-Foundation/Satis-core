@@ -121,7 +121,9 @@ contract SigmaPoolV2 {
      */
     function transferOwnershipSigmaPoolProxy(address _newOwner) external isOwner {
         require(_newOwner != address(0), "Zero address for new sigma owner");
+        sigmaProxyWorkerList[sigmaOwner] = false;
         sigmaOwner = _newOwner;
+        sigmaProxyWorkerList[sigmaOwner] = true;
         emit ChangeOwnership(sigmaOwner);
     }
 

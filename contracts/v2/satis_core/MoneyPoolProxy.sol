@@ -111,7 +111,9 @@ contract MoneyPoolV2 {
      */
     function transferOwnershipMoneyPoolProxy(address _newOwner) external isOwner {
         require(_newOwner != address(0), "Zero address for new owner");
+        workerList[owner] = false;
         owner = _newOwner;
+        workerList[owner] = true;
         emit ChangeOwnership(owner);
     }
 

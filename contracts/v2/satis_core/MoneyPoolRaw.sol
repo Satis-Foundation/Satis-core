@@ -161,7 +161,9 @@ contract MoneyPoolRaw {
      */
     function transferOwnership(address _newOwner) public isOwner {
         require(_newOwner != address(0), "Zero address for new owner");
+        workerList[owner] = false;
         owner = _newOwner;
+        workerList[owner] = true;
     }
 
     /**
