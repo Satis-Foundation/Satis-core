@@ -179,6 +179,7 @@ contract MoneyPoolV2 {
      * @dev Tier 1 withdrawal
      */
     function verifyAndWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+        require(_tier == 1, "Wrong function called for withdraw tier");
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
@@ -191,6 +192,7 @@ contract MoneyPoolV2 {
      * @dev Tier 2 withdrawal
      */
     function verifyAndQueue(bytes memory _targetSignature, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+        require(_tier == 2, "Wrong function called for withdraw tier");
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         bool _queueDone = poolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
@@ -203,6 +205,7 @@ contract MoneyPoolV2 {
      * @dev Tier 3 withdrawal
      */
     function verifyAndPartialWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _partialWithdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+        require(_tier == 3, "Wrong function called for withdraw tier");
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _tier, _chainId, _poolAddress, _nonce);
