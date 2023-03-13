@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-//import "../lib_and_interface/ISigmaPoolRaw.sol";
 import "../lib_and_interface/IMoneyPoolRaw.sol";
 import "../lib_and_interface/ISigmaAction.sol";
 import "../lib_and_interface/Address.sol";
