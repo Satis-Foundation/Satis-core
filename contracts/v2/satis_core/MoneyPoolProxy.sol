@@ -178,10 +178,10 @@ contract MoneyPoolV2 {
     /**
      * @dev Tier 1 withdrawal
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _tier, _nonce);
+        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
         IAction actionContract = IAction(actionContractAddress);
         bool _eventDone = actionContract.queueWithdraw(msg.sender, _tokenAddress, _withdrawValue, _tier);
         _isDone = _withdrawDone && _eventDone;
@@ -190,10 +190,10 @@ contract MoneyPoolV2 {
     /**
      * @dev Tier 2 withdrawal
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+    function verifyAndQueue(bytes memory _targetSignature, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _queueDone = poolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _tier, _nonce);
+        bool _queueDone = poolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
         IAction actionContract = IAction(actionContractAddress);
         bool _eventDone = actionContract.queueWithdraw(msg.sender, _tokenAddress, _queueValue, _tier);
         _isDone = _queueDone && _eventDone;
@@ -202,10 +202,10 @@ contract MoneyPoolV2 {
     /**
      * @dev Tier 3 withdrawal
      */
-    function verifyAndPartialWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _partialWithdrawValue, uint256 _tier, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
+    function verifyAndPartialWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _partialWithdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _tier, _nonce);
+        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _tier, _chainId, _poolAddress, _nonce);
         IAction actionContract = IAction(actionContractAddress);
         bool _eventDone = actionContract.queueWithdraw(msg.sender, _tokenAddress, _partialWithdrawValue, _tier);
         _isDone = _withdrawDone && _eventDone;

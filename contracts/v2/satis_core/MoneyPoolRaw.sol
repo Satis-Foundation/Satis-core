@@ -326,13 +326,16 @@ contract MoneyPoolRaw {
       string token;
       string withdraw;
       string tier;
+      string chainid;
       string nonce;
     }
 
     /**
      * @dev Verify signature, internal function
      */
-    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) internal view returns(bool _isDone) {
+    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) internal view returns(bool _isDone) {
+        require(_chainId == block.chainid, "Incorrect chain ID");
+        require(_poolAddress == address(this));
         require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
         bytes32 _matchHash;
         bytes32 _hashForRecover;
@@ -342,8 +345,9 @@ contract MoneyPoolRaw {
         str.token = address2str(_tokenAddress);
         str.withdraw = uint2str(_withdrawValue);
         str.tier = uint2str(_tier);
+        str.chainid = uint2str(_chainId);
         str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier));
+        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid));
         _hashForRecover = hashingMessage(_matchHash);
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         require (_recoveredAddress == owner, "Incorrect signature");
@@ -353,8 +357,8 @@ contract MoneyPoolRaw {
     /**
      * @dev Tier 1 withdrawal
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _nonce) public isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _nonce);
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
         clientNonce[_clientAddress] = _nonce.add(1);
 
@@ -370,8 +374,8 @@ contract MoneyPoolRaw {
     /**
      * @dev Tier 2 withdrawal
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _nonce) public isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _nonce);
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for queuing fails");
         clientNonce[_clientAddress] = _nonce.add(1);
         queueCount[_tokenAddress] += 1;
@@ -388,8 +392,8 @@ contract MoneyPoolRaw {
     /**
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _nonce) external isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _nonce);
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) external isProxy returns(bool _isDone) {
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
         clientNonce[_clientAddress] = _nonce.add(1);
