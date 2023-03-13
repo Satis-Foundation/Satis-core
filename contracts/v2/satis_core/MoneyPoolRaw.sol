@@ -325,6 +325,7 @@ contract MoneyPoolRaw {
       string withdraw;
       string tier;
       string chainid;
+      string pooladdr;
       string nonce;
     }
 
@@ -344,8 +345,9 @@ contract MoneyPoolRaw {
         str.withdraw = uint2str(_withdrawValue);
         str.tier = uint2str(_tier);
         str.chainid = uint2str(_chainId);
+        str.pooladdr = address2str(_poolAddress);
         str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid));
+        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
         _hashForRecover = hashingMessage(_matchHash);
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         require (_recoveredAddress == owner, "Incorrect signature");
