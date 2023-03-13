@@ -4,10 +4,6 @@ pragma solidity ^0.8.0;
 
 import "../lib_and_interface/IMoneyPoolRaw.sol";
 import "../lib_and_interface/ISigmaAction.sol";
-import "../lib_and_interface/Address.sol";
-import "../lib_and_interface/SafeMath.sol";
-import "../lib_and_interface/IERC20.sol";
-import "../lib_and_interface/SafeERC20.sol";
 
 /**
  * This contract is a simple money pool for deposit.
@@ -23,9 +19,6 @@ import "../lib_and_interface/SafeERC20.sol";
 // import '@openzeppelin/contracts/math/SafeMath.sol';
 
 contract SigmaPoolV2 {
-
-    using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     address public sigmaOwner;
     address public sigmaActionContractAddress;

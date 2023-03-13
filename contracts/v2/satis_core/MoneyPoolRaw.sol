@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import "../lib_and_interface/Address.sol";
-import "../lib_and_interface/SafeMath.sol";
 import "../lib_and_interface/IERC20.sol";
 import "../lib_and_interface/SafeERC20.sol";
 
@@ -21,7 +20,6 @@ import "../lib_and_interface/SafeERC20.sol";
 contract MoneyPoolRaw {
 
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     mapping (address => mapping (address => int256)) public clientDepositRecord;
     mapping (address => uint256) public totalLockedAssets;
@@ -65,7 +63,7 @@ contract MoneyPoolRaw {
     modifier correctRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _rebalanceAmount) {
         uint256 _queueValue;
         for (uint256 i = 0; i < _queueValueList.length; i++) {
-            _queueValue.add(_queueValueList[i]);
+            _queueValue += _queueValueList[i];
         }
         require (_totalDumpAmount - _rebalanceAmount == _queueValue, "Dump value - rebalance amount != queue value sum");
         _;
@@ -216,7 +214,7 @@ contract MoneyPoolRaw {
         int256 _recordAddValue = int256(_addValue);
         depositToken.safeTransferFrom(_clientAddress, address(this), _addValue);
         clientDepositRecord[_clientAddress][_tokenAddress] += _recordAddValue;
-        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].add(_addValue);
+        totalLockedAssets[_tokenAddress] += _addValue;
         _isDone = true;
     }
 
@@ -313,8 +311,8 @@ contract MoneyPoolRaw {
      */
     function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) public isWorker returns(bool _isDone) {
         for (uint i = 0; i < _clientAddressList.length; i++) {
-            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] = instantWithdrawReserve[_clientAddressList[i]][_tokenAddress].add(_tokenValueList[i]);
-            totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_tokenValueList[i]);
+            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] += _tokenValueList[i];
+            totalLockedAssets[_tokenAddress] -= _tokenValueList[i];
             int256 _recordWithdrawValue = int256(_tokenValueList[i]);
             clientDepositRecord[_clientAddressList[i]][_tokenAddress] -= _recordWithdrawValue;
         }
@@ -360,10 +358,10 @@ contract MoneyPoolRaw {
     function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
         bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
-        clientNonce[_clientAddress] = _nonce.add(1);
+        clientNonce[_clientAddress] = _nonce + 1;
 
-        instantWithdrawReserve[_clientAddress][_tokenAddress] = instantWithdrawReserve[_clientAddress][_tokenAddress].add(_withdrawValue);
-        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_withdrawValue);
+        instantWithdrawReserve[_clientAddress][_tokenAddress] += _withdrawValue;
+        totalLockedAssets[_tokenAddress] -= _withdrawValue;
 
         int256 _recordWithdrawValue = int256(_withdrawValue);
         clientDepositRecord[_clientAddress][_tokenAddress] -= _recordWithdrawValue;
@@ -377,11 +375,11 @@ contract MoneyPoolRaw {
     function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
         bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for queuing fails");
-        clientNonce[_clientAddress] = _nonce.add(1);
+        clientNonce[_clientAddress] = _nonce + 1;
         queueCount[_tokenAddress] += 1;
 
-        withdrawalQueue[_clientAddress][_tokenAddress] = withdrawalQueue[_clientAddress][_tokenAddress].add(_queueValue);
-        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_queueValue);
+        withdrawalQueue[_clientAddress][_tokenAddress] += _queueValue;
+        totalLockedAssets[_tokenAddress] -= _queueValue;
 
         int256 _recordQueueValue = int256(_queueValue);
         clientDepositRecord[_clientAddress][_tokenAddress] -= _recordQueueValue;
@@ -396,12 +394,12 @@ contract MoneyPoolRaw {
         bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
-        clientNonce[_clientAddress] = _nonce.add(1);
+        clientNonce[_clientAddress] = _nonce + 1;
 
         //Send redeemed token
         IERC20 satisToken = IERC20(_tokenAddress);
         satisToken.safeTransfer(_clientAddress, _redeemValue);
-        satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].sub(_redeemValue);
+        satisTokenBalance[_tokenAddress] -= _redeemValue;
         _isDone = true;
     }
 
@@ -411,7 +409,7 @@ contract MoneyPoolRaw {
     function fundSatisToken(address _tokenAddress, uint256 _fundingValue) external isWorker returns(bool _isDone) {
         IERC20 satisToken = IERC20(_tokenAddress);
         satisToken.safeTransferFrom(msg.sender, address(this), _fundingValue);
-        satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].add(_fundingValue);
+        satisTokenBalance[_tokenAddress] += _fundingValue;
         _isDone = true;
     }
 
@@ -421,7 +419,7 @@ contract MoneyPoolRaw {
     function workerTakeSaisToken(address _tokenAddress, uint256 _takingValue) external isWorker returns(bool _isDone) {
         IERC20 satisToken = IERC20(_tokenAddress);
         satisToken.safeTransfer(msg.sender, _takingValue);
-        satisTokenBalance[_tokenAddress] = satisTokenBalance[_tokenAddress].sub(_takingValue);
+        satisTokenBalance[_tokenAddress] -= _takingValue;
         _isDone = true;
     }
 
@@ -431,7 +429,7 @@ contract MoneyPoolRaw {
     function workerTakeLockedFund(address _tokenAddress, uint256 _takeValue) external isWorker returns(bool _isDone) {
         require(_takeValue <= totalLockedAssets[_tokenAddress], "Taking more than the locked assets in contract");
         IERC20 takeToken = IERC20(_tokenAddress);
-        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_takeValue);
+        totalLockedAssets[_tokenAddress] -= _takeValue;
         takeToken.safeTransfer(msg.sender, _takeValue);
         emit WorkerTakeLockedFund(msg.sender, _tokenAddress, _takeValue);
         _isDone = true;
@@ -447,14 +445,14 @@ contract MoneyPoolRaw {
         // Normal rebalancing
         IERC20 dumpToken = IERC20(_tokenAddress);
         dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
-        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].add(_rebalanceAmount);
+        totalLockedAssets[_tokenAddress] += _rebalanceAmount;
 
         // Send all fund to queued users
         if (_clientAddressList.length != 0) {
             for (uint256 i=0; i < _clientAddressList.length; i++) {
                 //dumpToken.safeTransferFrom(msg.sender, address(this), _queueValueList[i]);
                 dumpToken.safeTransfer(_clientAddressList[i], _queueValueList[i]);
-                withdrawalQueue[_clientAddressList[i]][_tokenAddress] = withdrawalQueue[_clientAddressList[i]][_tokenAddress].sub(_queueValueList[i]);
+                withdrawalQueue[_clientAddressList[i]][_tokenAddress] -= _queueValueList[i];
             }
             emit WorkerDumpBridgedFund(msg.sender, _clientAddressList, _tokenAddress, _queueValueList);
         }
@@ -478,7 +476,7 @@ contract MoneyPoolRaw {
         dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
         for (uint256 i=0; i < _clientAddressList.length; i++) {
             dumpToken.safeTransfer(_clientAddressList[i], _instantWithdrawValueList[i]);
-            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] = instantWithdrawReserve[_clientAddressList[i]][_tokenAddress].sub(_instantWithdrawValueList[i]);
+            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] -= _instantWithdrawValueList[i];
         }
         emit WorkerDumpInstantWithdrawFund(msg.sender, _clientAddressList, _tokenAddress, _instantWithdrawValueList);
         _isDone = true;
@@ -491,7 +489,7 @@ contract MoneyPoolRaw {
         require(_takeProfitValue <= totalLockedAssets[_tokenAddress], "Not enough balance to take");
         IERC20 profitToken = IERC20(_tokenAddress);
         profitToken.safeTransfer(msg.sender, _takeProfitValue);
-        totalLockedAssets[_tokenAddress] = totalLockedAssets[_tokenAddress].sub(_takeProfitValue);
+        totalLockedAssets[_tokenAddress] -= _takeProfitValue;
         emit OwnerTakeProfit(_tokenAddress, _takeProfitValue);
         _isDone = true;
     }
