@@ -363,7 +363,6 @@ contract MoneyPoolRaw {
         clientNonce[_clientAddress] = _nonce + 1;
 
         instantWithdrawReserve[_clientAddress][_tokenAddress] += _withdrawValue;
-        totalLockedAssets[_tokenAddress] -= _withdrawValue;
 
         int256 _recordWithdrawValue = int256(_withdrawValue);
         clientDepositRecord[_clientAddress][_tokenAddress] -= _recordWithdrawValue;
@@ -381,7 +380,6 @@ contract MoneyPoolRaw {
         queueCount[_tokenAddress] += 1;
 
         withdrawalQueue[_clientAddress][_tokenAddress] += _queueValue;
-        totalLockedAssets[_tokenAddress] -= _queueValue;
 
         int256 _recordQueueValue = int256(_queueValue);
         clientDepositRecord[_clientAddress][_tokenAddress] -= _recordQueueValue;
