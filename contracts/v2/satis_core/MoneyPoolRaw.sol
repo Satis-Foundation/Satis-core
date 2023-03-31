@@ -61,6 +61,7 @@ contract MoneyPoolRaw {
     }
 
     modifier sufficientRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _poolAmount) {
+        require (_totalDumpAmount > 0 || _queueValueList.length > 0, "Zero dump value and zero queue list length");
         uint256 _queueValue;
         for (uint256 i = 0; i < _queueValueList.length; i++) {
             _queueValue += _queueValueList[i];
@@ -444,8 +445,10 @@ contract MoneyPoolRaw {
         
         // Normal rebalancing
         IERC20 dumpToken = IERC20(_tokenAddress);
-        dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
-        totalLockedAssets[_tokenAddress] += _totalDumpAmount;
+        if (_totalDumpAmount > 0) {
+            dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
+            totalLockedAssets[_tokenAddress] += _totalDumpAmount;
+        }
 
         // Send all fund to queued users
         if (_clientAddressList.length != 0) {
@@ -473,8 +476,10 @@ contract MoneyPoolRaw {
     function workerDumpInstantWithdrawalFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _instantWithdrawValueList, uint256 _totalDumpAmount) external 
     isWorker sufficientRebalanceValue(_instantWithdrawValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
         IERC20 dumpToken = IERC20(_tokenAddress);
-        dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
-        totalLockedAssets[_tokenAddress] += _totalDumpAmount;
+        if (_totalDumpAmount > 0) {
+            dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
+            totalLockedAssets[_tokenAddress] += _totalDumpAmount;
+        }
         for (uint256 i=0; i < _clientAddressList.length; i++) {
             dumpToken.safeTransfer(_clientAddressList[i], _instantWithdrawValueList[i]);
             totalLockedAssets[_tokenAddress] -= _instantWithdrawValueList[i];
