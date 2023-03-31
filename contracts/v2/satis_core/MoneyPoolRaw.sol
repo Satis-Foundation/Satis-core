@@ -35,7 +35,7 @@ contract MoneyPoolRaw {
     address public sigmaProxy;
 
     event WorkerTakeLockedFund(address workerAddress, address tokenAddress, uint256 takeValue);
-    event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
+    event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList, uint256 rebalanceValue);
     event WorkerDumpInstantWithdrawFund(address workerAddress, address[] _clientAddressList, address _tokenAddress, uint256[] _instantWithdrawValueList);
     event OwnerTakeProfit(address tokenAddress, uint256 takeProfitValue);
 
@@ -60,12 +60,12 @@ contract MoneyPoolRaw {
         _;
     }
 
-    modifier correctRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _rebalanceAmount) {
+    modifier sufficientRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _poolAmount) {
         uint256 _queueValue;
         for (uint256 i = 0; i < _queueValueList.length; i++) {
             _queueValue += _queueValueList[i];
         }
-        require (_totalDumpAmount - _rebalanceAmount == _queueValue, "Dump value - rebalance amount != queue value sum");
+        require (_queueValue <= _poolAmount + _totalDumpAmount, "Dump value + pool assets < queue value sum");
         _;
     }
 
@@ -439,22 +439,22 @@ contract MoneyPoolRaw {
      * @dev Worker dumping crosschain fund from rebalancing.
      */
     function workerDumpRebalancedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _rebalanceAmount) external 
-    isWorker correctRebalanceValue(_queueValueList, _totalDumpAmount, _rebalanceAmount) returns(bool _isDone) {
+    isWorker sufficientRebalanceValue(_queueValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
         require (_clientAddressList.length == _queueValueList.length, "Lists length not match");
         
         // Normal rebalancing
         IERC20 dumpToken = IERC20(_tokenAddress);
         dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
-        totalLockedAssets[_tokenAddress] += _rebalanceAmount;
+        totalLockedAssets[_tokenAddress] += _totalDumpAmount;
 
         // Send all fund to queued users
         if (_clientAddressList.length != 0) {
             for (uint256 i=0; i < _clientAddressList.length; i++) {
-                //dumpToken.safeTransferFrom(msg.sender, address(this), _queueValueList[i]);
                 dumpToken.safeTransfer(_clientAddressList[i], _queueValueList[i]);
+                totalLockedAssets[_tokenAddress] -= _queueValueList[i];
                 withdrawalQueue[_clientAddressList[i]][_tokenAddress] -= _queueValueList[i];
             }
-            emit WorkerDumpBridgedFund(msg.sender, _clientAddressList, _tokenAddress, _queueValueList);
+            emit WorkerDumpBridgedFund(msg.sender, _clientAddressList, _tokenAddress, _queueValueList, _rebalanceAmount);
         }
 
         // Reset queue count
@@ -471,11 +471,13 @@ contract MoneyPoolRaw {
      * @dev Worker dumping fund for instant withdrawal.
      */
     function workerDumpInstantWithdrawalFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _instantWithdrawValueList, uint256 _totalDumpAmount) external 
-    isWorker correctRebalanceValue(_instantWithdrawValueList, _totalDumpAmount, 0) returns(bool _isDone) {
+    isWorker sufficientRebalanceValue(_instantWithdrawValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
         IERC20 dumpToken = IERC20(_tokenAddress);
         dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
+        totalLockedAssets[_tokenAddress] += _totalDumpAmount;
         for (uint256 i=0; i < _clientAddressList.length; i++) {
             dumpToken.safeTransfer(_clientAddressList[i], _instantWithdrawValueList[i]);
+            totalLockedAssets[_tokenAddress] -= _instantWithdrawValueList[i];
             instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] -= _instantWithdrawValueList[i];
         }
         emit WorkerDumpInstantWithdrawFund(msg.sender, _clientAddressList, _tokenAddress, _instantWithdrawValueList);
