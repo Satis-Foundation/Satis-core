@@ -35,7 +35,7 @@ contract MoneyPoolRaw {
     address public sigmaProxy;
 
     event WorkerTakeLockedFund(address workerAddress, address tokenAddress, uint256 takeValue);
-    event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList, uint256 rebalanceValue);
+    event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
     event WorkerDumpInstantWithdrawFund(address workerAddress, address[] _clientAddressList, address _tokenAddress, uint256[] _instantWithdrawValueList);
     event OwnerTakeProfit(address tokenAddress, uint256 takeProfitValue);
 
@@ -313,7 +313,6 @@ contract MoneyPoolRaw {
     function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) public isWorker returns(bool _isDone) {
         for (uint i = 0; i < _clientAddressList.length; i++) {
             instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] += _tokenValueList[i];
-            totalLockedAssets[_tokenAddress] -= _tokenValueList[i];
             int256 _recordWithdrawValue = int256(_tokenValueList[i]);
             clientDepositRecord[_clientAddressList[i]][_tokenAddress] -= _recordWithdrawValue;
         }
@@ -439,7 +438,7 @@ contract MoneyPoolRaw {
     /**
      * @dev Worker dumping crosschain fund from rebalancing.
      */
-    function workerDumpRebalancedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _rebalanceAmount) external 
+    function workerDumpRebalancedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _queueValueList, uint256 _totalDumpAmount) external 
     isWorker sufficientRebalanceValue(_queueValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
         require (_clientAddressList.length == _queueValueList.length, "Lists length not match");
         
@@ -457,7 +456,7 @@ contract MoneyPoolRaw {
                 totalLockedAssets[_tokenAddress] -= _queueValueList[i];
                 withdrawalQueue[_clientAddressList[i]][_tokenAddress] -= _queueValueList[i];
             }
-            emit WorkerDumpBridgedFund(msg.sender, _clientAddressList, _tokenAddress, _queueValueList, _rebalanceAmount);
+            emit WorkerDumpBridgedFund(msg.sender, _clientAddressList, _tokenAddress, _queueValueList);
         }
 
         // Reset queue count
