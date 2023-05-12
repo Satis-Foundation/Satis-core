@@ -416,7 +416,7 @@ contract MoneyPoolRaw {
     /**
      * @dev Workers take SATIS token from this contract
      */
-    function workerTakeSaisToken(address _tokenAddress, uint256 _takingValue) external isWorker returns(bool _isDone) {
+    function workerTakeSatisToken(address _tokenAddress, uint256 _takingValue) external isWorker returns(bool _isDone) {
         IERC20 satisToken = IERC20(_tokenAddress);
         satisToken.safeTransfer(msg.sender, _takingValue);
         satisTokenBalance[_tokenAddress] -= _takingValue;
