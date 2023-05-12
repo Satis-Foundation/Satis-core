@@ -508,7 +508,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
 
 
-contract TestTokenCZK is ERC20 {
+contract fakeUSDT is ERC20 {
 
     address public owner;
 
@@ -521,17 +521,17 @@ contract TestTokenCZK is ERC20 {
     }
 
 
-    constructor() ERC20("ZKSync-C5", "ZKC5") {
+    constructor() ERC20("ZKSync-T1", "ZKT1") {
         owner = msg.sender;
         _mint(msg.sender, 1000000000000000000000000000000000000 * 10 ** 6);
     }
 
-    function minting(address _recipient, uint256 _amount) external isOwner {
-        _mint(_recipient, _amount * 10 ** 6);
-        emit mintToken(_recipient, _amount);
+    function mint(uint256 _amount) external isOwner {
+        _mint(msg.sender, _amount * 10 ** 6);
+        emit mintToken(msg.sender, _amount);
     }
 
-    function burning(uint256 _amount) external {
+    function burn(uint256 _amount) external {
         _burn(msg.sender, _amount);
         emit burnToken(msg.sender, _amount);
     }
