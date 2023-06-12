@@ -31,16 +31,15 @@ contract SigmaPoolV2 {
      */
     event ChangeOwnership(address newAdminAddress);
     event ChangePoolAddress(address[] newlyAddedPoolAddressList);
-    event AddWorkers(address[] addWorkerList);
-    event RemoveWorkers(address[] removeWorkerList);
+    event ChangeWorkers(bool isAdd, address[] changeList);
 
     modifier isOwner() {
-        require (msg.sender == sigmaOwner, "Not an admin");
+        require (msg.sender == sigmaOwner, "Not admin");
         _;
     }
 
     modifier isWorker() {
-        require (sigmaProxyWorkerList[msg.sender] == true, "Not a worker");
+        require (sigmaProxyWorkerList[msg.sender] == true, "Not worker");
         _;
     }
 
@@ -48,8 +47,8 @@ contract SigmaPoolV2 {
      * @dev Sets the value for {owner}
      */
     constructor(string[] memory _sigmaPoolNameList, address[] memory _sigmaPoolAddressList, address _sigmaActionContractAddress) {
-        require(_sigmaActionContractAddress != address(0), "Zero address for sigma action contract");
-        require(_sigmaPoolNameList.length == _sigmaPoolAddressList.length, "Lists' length is different");
+        require(_sigmaActionContractAddress != address(0), "Sigma Action 0 addr");
+        require(_sigmaPoolNameList.length == _sigmaPoolAddressList.length, "List length is inconsistent");
         sigmaOwner = msg.sender;
         sigmaProxyWorkerList[sigmaOwner] = true;
         for(uint256 i=0; i < _sigmaPoolAddressList.length; i++) {
@@ -59,62 +58,10 @@ contract SigmaPoolV2 {
     }
 
     /**
-     * @dev Get client's nonce in a pool.
-     */
-    function getClientSigmaNonce(address _clientAddress, string memory _poolName) external view returns(uint256 clientSigmaNonce) {
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        clientSigmaNonce = sigmaPoolContract.getClientNonce(_clientAddress);
-    }
-
-    /**
-     * @dev Get client's balance in a pool.
-     */
-    function getClientSigmaDepositRecord(address _clientAddress, address _tokenAddress, string memory _poolName) external view returns(uint256 clientSigmaDepositRecord) {
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        clientSigmaDepositRecord = sigmaPoolContract.getClientDepositRecord(_clientAddress, _tokenAddress);
-    }
-
-    /**
-     * @dev Get client's locked balance in a pool.
-     */
-    function getLiquidityAmountInPool(address _tokenAddress, string memory _poolName) external view returns(uint256 liquidityInPool) {
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        liquidityInPool = sigmaPoolContract.getLiquidityAmountInPool(_tokenAddress);
-    }
-
-    /**
-     * @dev Get contract's storage of SATIS tokens.
-     */
-    function getSatisTokenAmountInContract(address _tokenAddress, string memory _poolName) public view returns(uint256 satisTokenInPool) {
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        satisTokenInPool = sigmaPoolContract.getSatisTokenAmountInPool(_tokenAddress);
-    }
-
-    /**
-     * @dev Get the particular pool's owner.
-     */
-    function getSigmaPoolOwner(string memory _poolName) external view returns(address sigmaPoolOwner) {
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        sigmaPoolOwner = sigmaPoolContract.getPoolOwner();
-    }
-
-    /**
-     * @dev Get a pool's address with its name.
-     */
-    function getSigmaPoolAddress(string memory _poolName) public view returns(address _sigmaPoolAddress) {
-        _sigmaPoolAddress = sigmaPoolAddressList[_poolName];
-    }
-
-    /**
      * @dev Transfer the ownership of this contract.
      */
     function transferOwnershipSigmaPoolProxy(address _newOwner) external isOwner {
-        require(_newOwner != address(0), "Zero address for new sigma owner");
+        require(_newOwner != address(0), "0 addr");
         sigmaProxyWorkerList[sigmaOwner] = false;
         sigmaOwner = _newOwner;
         sigmaProxyWorkerList[sigmaOwner] = true;
@@ -128,7 +75,7 @@ contract SigmaPoolV2 {
         for(uint256 i=0; i < _addWorkerList.length; i++) {
             sigmaProxyWorkerList[_addWorkerList[i]] = true;
         }
-        emit AddWorkers(_addWorkerList);
+        emit ChangeWorkers(true, _addWorkerList);
     }
 
     /**
@@ -138,7 +85,7 @@ contract SigmaPoolV2 {
         for(uint256 i=0; i < _removeWorkerList.length; i++) {
             sigmaProxyWorkerList[_removeWorkerList[i]] = false;
         }
-        emit RemoveWorkers(_removeWorkerList);
+        emit ChangeWorkers(false, _removeWorkerList);
     }
 
     function verifySigmaProxyWorker(address _workerAddress) external view returns(bool _isWorker) {
@@ -149,7 +96,7 @@ contract SigmaPoolV2 {
      * @dev Append and overwrite pool address list. Set address to 0x0 for deleting pool.
      */
     function changeSigmaPool(string[] memory _newPoolNameList, address[] memory _newPoolAddressList) external isWorker {
-        require(_newPoolNameList.length == _newPoolAddressList.length, "Lists' length is different");
+        require(_newPoolNameList.length == _newPoolAddressList.length, "List length is inconsistent");
         for(uint256 i=0; i < _newPoolAddressList.length; i++) {
             sigmaPoolAddressList[_newPoolNameList[i]] = _newPoolAddressList[i];
         }
@@ -160,7 +107,7 @@ contract SigmaPoolV2 {
      * @dev Change sigma event emission contract
      */
     function changeSigmaActionContract(address _newActionContractAddress) external isWorker {
-        require(_newActionContractAddress != address(0), "Zero address for new sigma action contract");
+        require(_newActionContractAddress != address(0), "0 addr");
         sigmaActionContractAddress = _newActionContractAddress;
     }
 
@@ -177,41 +124,14 @@ contract SigmaPoolV2 {
     }
 
     /**
-     * @dev Tier 1 withdrawal
+     * @dev Withdrawal
      */
     function sigmaVerifyAndWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
-        require(_tier == 1, "Wrong function called for withdraw tier");
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
         bool _withdrawDone = sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
         bool _eventDone = sigmaActionContract.sigmaQueueWithdraw(msg.sender, _tokenAddress, _withdrawValue, _tier);
-        _isDone = _withdrawDone && _eventDone;
-    }
-
-    /**
-     * @dev Tier 2 withdrawal
-     */
-    function sigmaVerifyAndQueue(bytes memory _targetSignature, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
-        require(_tier == 2, "Wrong function called for withdraw tier");
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _queueDone = sigmaPoolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
-        ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaQueueWithdraw(msg.sender, _tokenAddress, _queueValue, _tier);
-        _isDone = _queueDone && _eventDone;
-    }
-
-    /**
-     * @dev Tier 3 withdrawal
-     */
-    function sigmaVerifyAndPartialWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _partialWithdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
-        require(_tier == 3, "Wrong function called for withdraw tier");
-        require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _withdrawDone = sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _tier, _chainId, _poolAddress, _nonce);
-        ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaQueueWithdraw(msg.sender, _tokenAddress, _partialWithdrawValue, _tier);
         _isDone = _withdrawDone && _eventDone;
     }
 

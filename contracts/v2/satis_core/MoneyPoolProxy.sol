@@ -31,8 +31,7 @@ contract MoneyPoolV2 {
      */
     event ChangeOwnership(address newAdminAddress);
     event ChangePoolAddress(address[] newlyAddedPoolAddressList);
-    event AddWorkers(address[] addWorkerList);
-    event RemoveWorkers(address[] removeWorkerList);
+    event ChangeWorkers(bool isAdd, address[] changeList);
 
     modifier isOwner() {
         require (msg.sender == owner, "Not an admin");
@@ -48,8 +47,8 @@ contract MoneyPoolV2 {
      * @dev Sets the value for {owner}, {workerList} and {poolList}
      */
     constructor(string[] memory _poolNameList, address[] memory _poolAddressList, address _actionContractAddress) {
-        require(_actionContractAddress != address(0), "Zero address for action contract");
-        require(_poolNameList.length == _poolAddressList.length, "Lists' length is different");
+        require(_actionContractAddress != address(0), "0 addr action contract");
+        require(_poolNameList.length == _poolAddressList.length, "List length inconsistent");
         owner = msg.sender;
         workerList[owner] = true;
         for(uint256 i=0; i < _poolAddressList.length; i++) {
@@ -59,60 +58,10 @@ contract MoneyPoolV2 {
     }
 
     /**
-     * @dev Get client's nonce in a pool.
-     */
-    function getClientNonce(address _clientAddress, string memory _poolName) external view returns(uint256 clientNonce) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        clientNonce = poolContract.getClientNonce(_clientAddress);
-    }
-
-    /**
-     * @dev Get client's balance in a pool.
-     */
-    function getClientDepositRecord(address _clientAddress, address _tokenAddress, string memory _poolName) external view returns(uint256 clientDepositRecord) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        clientDepositRecord = poolContract.getClientDepositRecord(_clientAddress, _tokenAddress);
-    }
-
-    /**
-     * @dev Get client's locked balance in a pool.
-     */
-    function getLiquidityAmountInPool(address _tokenAddress, string memory _poolName) external view returns(uint256 liquidityInPool) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        liquidityInPool = poolContract.getLiquidityAmountInPool(_tokenAddress);
-    }
-
-    /**
-     * @dev Get the particular pool's owner.
-     */
-    function getPoolOwner(string memory _poolName) external view returns(address poolOwner) {
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        poolOwner = poolContract.getPoolOwner();
-    }
-
-    /**
-     * @dev Check if an address is a worker.
-     */
-    function verifyWorker(address _workerAddress) public view returns(bool _isWorker) {
-        _isWorker = workerList[_workerAddress];
-    }
-
-    /**
-     * @dev Get a pool's address with its name.
-     */
-    function getPoolAddress(string memory _poolName) public view returns(address _poolAddress) {
-        _poolAddress = poolAddressList[_poolName];
-    }
-
-    /**
      * @dev Transfer the ownership of this contract.
      */
     function transferOwnershipMoneyPoolProxy(address _newOwner) external isOwner {
-        require(_newOwner != address(0), "Zero address for new owner");
+        require(_newOwner != address(0), "0 addr");
         workerList[owner] = false;
         owner = _newOwner;
         workerList[owner] = true;
@@ -126,7 +75,7 @@ contract MoneyPoolV2 {
         for(uint256 i=0; i < _addWorkerList.length; i++) {
             workerList[_addWorkerList[i]] = true;
         }
-        emit AddWorkers(_addWorkerList);
+        emit ChangeWorkers(true, _addWorkerList);
     }
 
     /**
@@ -136,14 +85,14 @@ contract MoneyPoolV2 {
         for(uint256 i=0; i < _removeWorkerList.length; i++) {
             workerList[_removeWorkerList[i]] = false;
         }
-        emit RemoveWorkers(_removeWorkerList);
+        emit ChangeWorkers(false, _removeWorkerList);
     }
 
     /**
      * @dev Append and overwrite pool address list. Set address to 0x0 for deleting pool.
      */
     function changePool(string[] memory _newPoolNameList, address[] memory _newPoolAddressList) external isWorker {
-        require(_newPoolNameList.length == _newPoolAddressList.length, "Lists' length is different");
+        require(_newPoolNameList.length == _newPoolAddressList.length, "List length inconsistent");
         for(uint256 i=0; i < _newPoolAddressList.length; i++) {
             poolAddressList[_newPoolNameList[i]] = _newPoolAddressList[i];
         }
@@ -154,7 +103,7 @@ contract MoneyPoolV2 {
      * @dev Change action contract address for new event output format.
      */
     function changeActionContract(address _newActionContractAddress) external isWorker {
-        require(_newActionContractAddress != address(0), "Zero address for new action contract");
+        require(_newActionContractAddress != address(0), "0 addr");
         actionContractAddress = _newActionContractAddress;
     }
 
@@ -176,10 +125,9 @@ contract MoneyPoolV2 {
     }
 
     /**
-     * @dev Tier 1 withdrawal
+     * @dev Withdrawal
      */
     function verifyAndWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
-        require(_tier == 1, "Wrong function called for withdraw tier");
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
@@ -187,32 +135,4 @@ contract MoneyPoolV2 {
         bool _eventDone = actionContract.queueWithdraw(msg.sender, _tokenAddress, _withdrawValue, _tier);
         _isDone = _withdrawDone && _eventDone;
     }
-
-    /**
-     * @dev Tier 2 withdrawal
-     */
-    function verifyAndQueue(bytes memory _targetSignature, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
-        require(_tier == 2, "Wrong function called for withdraw tier");
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _queueDone = poolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
-        IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.queueWithdraw(msg.sender, _tokenAddress, _queueValue, _tier);
-        _isDone = _queueDone && _eventDone;
-    }
-
-    /**
-     * @dev Tier 3 withdrawal
-     */
-    function verifyAndPartialWithdrawFund(bytes memory _targetSignature, address _tokenAddress, uint256 _partialWithdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
-        require(_tier == 3, "Wrong function called for withdraw tier");
-        require(poolAddressList[_poolName] != address(0), "No such pool");
-        IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _tier, _chainId, _poolAddress, _nonce);
-        IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.queueWithdraw(msg.sender, _tokenAddress, _partialWithdrawValue, _tier);
-        _isDone = _withdrawDone && _eventDone;
-    }
-
-
 }
