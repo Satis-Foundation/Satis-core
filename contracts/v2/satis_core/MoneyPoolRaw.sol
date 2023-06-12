@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "../lib_and_interface/Address.sol";
 import "../lib_and_interface/IERC20.sol";
 import "../lib_and_interface/SafeERC20.sol";
-
+import "./MultiSig.sol";
 
 /**
  * This contract is a simple money pool for deposit.
@@ -16,6 +16,173 @@ import "../lib_and_interface/SafeERC20.sol";
  * of the original ERC20 token library, since some ETH functions might not be supported.
  */
 
+ contract MoneyPoolWorker {
+    using SafeERC20 for IERC20;
+    
+    mapping (address => mapping (address => int256)) public clientDepositRecord;
+    mapping (address => uint256) public totalLockedAssets;
+    mapping (address => mapping (address => uint256)) public instantWithdrawReserve;
+    mapping (address => mapping (address => uint256)) public withdrawalQueue;
+    mapping (address => uint256) public queueCount;
+    mapping (address => uint256) public clientNonce;
+    mapping (address => uint256) public satisTokenBalance;
+    mapping (address => bool) public workerList;
+
+    address public owner;
+    address public proxy;
+    address public sigmaProxy;
+
+    modifier isWorker() {
+        require (workerList[msg.sender] == true, "Not a worker");
+        _;
+    }
+
+    modifier isProxy() {
+        require (msg.sender == proxy || msg.sender == sigmaProxy, "Please use proxy contract.");
+        _;
+    }
+
+    modifier sufficientRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _poolAmount) {
+        require (_totalDumpAmount > 0 || _queueValueList.length > 0, "Zero dump value and zero queue list length");
+        uint256 _queueValue;
+        for (uint256 i = 0; i < _queueValueList.length; i++) {
+            _queueValue += _queueValueList[i];
+        }
+        require (_queueValue <= _poolAmount + _totalDumpAmount, "Dump value + pool assets < queue value sum");
+        _;
+    }
+
+    /**
+     * @dev Tier 1 withdrawal
+     */
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
+        require (_verification, "Signature verification for instant withdrawal fails");
+        clientNonce[_clientAddress] = _nonce + 1;
+
+        instantWithdrawReserve[_clientAddress][_tokenAddress] += _withdrawValue;
+
+        int256 _recordWithdrawValue = int256(_withdrawValue);
+        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordWithdrawValue;
+
+        _isDone = true;
+    }
+
+    /**
+     * @dev Tier 2 withdrawal
+     */
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
+        require (_verification, "Signature verification for queuing fails");
+        clientNonce[_clientAddress] = _nonce + 1;
+        queueCount[_tokenAddress] += 1;
+
+        withdrawalQueue[_clientAddress][_tokenAddress] += _queueValue;
+
+        int256 _recordQueueValue = int256(_queueValue);
+        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordQueueValue;
+
+        _isDone = true;
+    }
+
+    /**
+     * @dev Verify signature for redeeming SATIS token in Sigma Mining
+     */
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) external isProxy returns(bool _isDone) {
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
+        require (_verification == true, "Signature verification fails");
+        require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
+        clientNonce[_clientAddress] = _nonce + 1;
+
+        //Send redeemed token
+        IERC20 satisToken = IERC20(_tokenAddress);
+        satisToken.safeTransfer(_clientAddress, _redeemValue);
+        satisTokenBalance[_tokenAddress] -= _redeemValue;
+        _isDone = true;
+    }
+
+    /**
+     * @dev Fund SATIS token to this contract
+     */
+    function fundSatisToken(address _tokenAddress, uint256 _fundingValue) external isWorker returns(bool _isDone) {
+        IERC20 satisToken = IERC20(_tokenAddress);
+        satisToken.safeTransferFrom(msg.sender, address(this), _fundingValue);
+        satisTokenBalance[_tokenAddress] += _fundingValue;
+        _isDone = true;
+    }
+
+    /**
+     * @dev Workers take SATIS token from this contract
+     */
+    function workerTakeSatisToken(address _tokenAddress, uint256 _takingValue) external isWorker returns(bool _isDone) {
+        IERC20 satisToken = IERC20(_tokenAddress);
+        satisToken.safeTransfer(msg.sender, _takingValue);
+        satisTokenBalance[_tokenAddress] -= _takingValue;
+        _isDone = true;
+    }
+
+    /**
+     * @dev Worker taking locked fund for bridging.
+     */
+    function workerTakeLockedFund(address _tokenAddress, uint256 _takeValue) external isWorker returns(bool _isDone) {
+        require(_takeValue <= totalLockedAssets[_tokenAddress], "Taking more than the locked assets in contract");
+        IERC20 takeToken = IERC20(_tokenAddress);
+        totalLockedAssets[_tokenAddress] -= _takeValue;
+        takeToken.safeTransfer(msg.sender, _takeValue);
+        _isDone = true;
+    }
+
+    /**
+     * @dev Worker dumping crosschain fund from rebalancing.
+     */
+    function workerDumpRebalancedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _queueValueList, uint256 _totalDumpAmount) external 
+    isWorker sufficientRebalanceValue(_queueValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
+        require (_clientAddressList.length == _queueValueList.length, "Lists length not match");
+        
+        // Normal rebalancing
+        IERC20 dumpToken = IERC20(_tokenAddress);
+        if (_totalDumpAmount > 0) {
+            dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
+            totalLockedAssets[_tokenAddress] += _totalDumpAmount;
+        }
+
+        // Send all fund to queued users
+        if (_clientAddressList.length != 0) {
+            for (uint256 i=0; i < _clientAddressList.length; i++) {
+                dumpToken.safeTransfer(_clientAddressList[i], _queueValueList[i]);
+                totalLockedAssets[_tokenAddress] -= _queueValueList[i];
+                withdrawalQueue[_clientAddressList[i]][_tokenAddress] -= _queueValueList[i];
+            }
+        }
+
+        // Reset queue count
+        if (_clientAddressList.length >= queueCount[_tokenAddress]) {
+            queueCount[_tokenAddress] = 0;
+        } else {
+            queueCount[_tokenAddress] -= _clientAddressList.length;
+        }
+
+        _isDone = true;
+    }
+
+    /**
+     * @dev Worker dumping fund for instant withdrawal.
+     */
+    function workerDumpInstantWithdrawalFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _instantWithdrawValueList, uint256 _totalDumpAmount) external 
+    isWorker sufficientRebalanceValue(_instantWithdrawValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
+        IERC20 dumpToken = IERC20(_tokenAddress);
+        if (_totalDumpAmount > 0) {
+            dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
+            totalLockedAssets[_tokenAddress] += _totalDumpAmount;
+        }
+        for (uint256 i=0; i < _clientAddressList.length; i++) {
+            dumpToken.safeTransfer(_clientAddressList[i], _instantWithdrawValueList[i]);
+            totalLockedAssets[_tokenAddress] -= _instantWithdrawValueList[i];
+            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] -= _instantWithdrawValueList[i];
+        }
+        _isDone = true;
+    }
+ }
 
 contract MoneyPoolRaw {
 
@@ -33,6 +200,8 @@ contract MoneyPoolRaw {
     address public owner;
     address public proxy;
     address public sigmaProxy;
+
+    address workerContract;
 
     event WorkerTakeLockedFund(address workerAddress, address tokenAddress, uint256 takeValue);
     event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
@@ -78,13 +247,14 @@ contract MoneyPoolRaw {
     /**
      * @dev Sets the value for {owner}, owner is also a worker.
      */
-    constructor(address _initialProxyAddress, address _initialSigmaProxyAddress) {
+    constructor(address _initialProxyAddress, address _initialSigmaProxyAddress, address _workerContract) {
         require(_initialProxyAddress != address(0), "Zero address for proxy");
         require(_initialSigmaProxyAddress != address(0), "Zero address for sigma proxy");
         owner = msg.sender;
         workerList[owner] = true;
         proxy = _initialProxyAddress;
         sigmaProxy = _initialSigmaProxyAddress;
+        workerContract = _workerContract;
     }
 
     /**
@@ -219,93 +389,93 @@ contract MoneyPoolRaw {
         _isDone = true;
     }
 
-    /**
-     * @dev Internal function, recover signer from signature
-     */
-    function recoverSignature(bytes32 _targetHash, bytes memory _targetSignature) public pure correctSignatureLength(_targetSignature) returns(address) {
-        bytes32 _r;
-        bytes32 _s;
-        uint8 _v;
+    // /**
+    //  * @dev Internal function, recover signer from signature
+    //  */
+    // function recoverSignature(bytes32 _targetHash, bytes memory _targetSignature) public pure correctSignatureLength(_targetSignature) returns(address) {
+    //     bytes32 _r;
+    //     bytes32 _s;
+    //     uint8 _v;
 
-        assembly {
-            /*
-            First 32 bytes stores the length of the signature
+    //     assembly {
+    //         /*
+    //         First 32 bytes stores the length of the signature
 
-            add(sig, 32) = pointer of sig + 32
-            effectively, skips first 32 bytes of signature
+    //         add(sig, 32) = pointer of sig + 32
+    //         effectively, skips first 32 bytes of signature
 
-            mload(p) loads next 32 bytes starting at the memory address p into memory
-            */
+    //         mload(p) loads next 32 bytes starting at the memory address p into memory
+    //         */
 
-            // first 32 bytes, after the length prefix
-            _r := mload(add(_targetSignature, 32))
-            // second 32 bytes
-            _s := mload(add(_targetSignature, 64))
-            // final byte (first byte of the next 32 bytes)
-            _v := and(mload(add(_targetSignature, 65)), 255)
-            //_v := byte(0, mload(add(_targetSignature, 96)))
-        }
+    //         // first 32 bytes, after the length prefix
+    //         _r := mload(add(_targetSignature, 32))
+    //         // second 32 bytes
+    //         _s := mload(add(_targetSignature, 64))
+    //         // final byte (first byte of the next 32 bytes)
+    //         _v := and(mload(add(_targetSignature, 65)), 255)
+    //         //_v := byte(0, mload(add(_targetSignature, 96)))
+    //     }
 
-        require (_v == 0 || _v == 1 || _v == 27 || _v == 28, "Recover v value is fundamentally wrong");
+    //     require (_v == 0 || _v == 1 || _v == 27 || _v == 28, "Recover v value is fundamentally wrong");
 
-        if (_v < 27) {
-            _v += 27;
-        }
+    //     if (_v < 27) {
+    //         _v += 27;
+    //     }
 
-        require (_v == 27 || _v == 28, "Recover v value error: Not 27 or 28");
+    //     require (_v == 27 || _v == 28, "Recover v value error: Not 27 or 28");
 
-        return ecrecover(_targetHash, _v, _r, _s);
-    }
+    //     return ecrecover(_targetHash, _v, _r, _s);
+    // }
 
-    /**
-     * @dev Hashing message fro ecrevocer function
-     */
-    function hashingMessage(bytes32 _messageToBeHashed) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32",_messageToBeHashed));
-    }
+    // /**
+    //  * @dev Hashing message fro ecrevocer function
+    //  */
+    // function hashingMessage(bytes32 _messageToBeHashed) internal pure returns (bytes32) {
+    //     return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32",_messageToBeHashed));
+    // }
 
 
-    /**
-     * @dev Internal function, convert uint to string
-     */
-    function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
-        if (_i == 0) {
-            return "0";
-        }
-        uint j = _i;
-        uint len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint k = len;
-        while (_i != 0) {
-            k = k-1;
-            uint8 temp = (48 + uint8(_i - _i / 10 * 10));
-            bytes1 b1 = bytes1(temp);
-            bstr[k] = b1;
-            _i /= 10;
-        }
-        return string(bstr);
-    }
+    // /**
+    //  * @dev Internal function, convert uint to string
+    //  */
+    // function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
+    //     if (_i == 0) {
+    //         return "0";
+    //     }
+    //     uint j = _i;
+    //     uint len;
+    //     while (j != 0) {
+    //         len++;
+    //         j /= 10;
+    //     }
+    //     bytes memory bstr = new bytes(len);
+    //     uint k = len;
+    //     while (_i != 0) {
+    //         k = k-1;
+    //         uint8 temp = (48 + uint8(_i - _i / 10 * 10));
+    //         bytes1 b1 = bytes1(temp);
+    //         bstr[k] = b1;
+    //         _i /= 10;
+    //     }
+    //     return string(bstr);
+    // }
 
-    /**
-     * @dev Internal function, convert address to string
-     */
-    function address2str(address _addr) internal pure returns(string memory) {
-        bytes32 value = bytes32(uint256(uint160(_addr)));
-        bytes memory alphabet = "0123456789abcdef";
+    // /**
+    //  * @dev Internal function, convert address to string
+    //  */
+    // function address2str(address _addr) internal pure returns(string memory) {
+    //     bytes32 value = bytes32(uint256(uint160(_addr)));
+    //     bytes memory alphabet = "0123456789abcdef";
 
-        bytes memory str = new bytes(42);
-        str[0] = "0";
-        str[1] = "x";
-        for (uint i = 0; i < 20; i++) {
-            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
-        }
-        return string(str);
-    }
+    //     bytes memory str = new bytes(42);
+    //     str[0] = "0";
+    //     str[1] = "x";
+    //     for (uint i = 0; i < 20; i++) {
+    //         str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
+    //         str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
+    //     }
+    //     return string(str);
+    // }
 
     /**
      * @dev Worker unlock fund to instant withdrawal reserve.
@@ -319,79 +489,64 @@ contract MoneyPoolRaw {
         _isDone = true;
     }
 
-    struct Str {
-      string sender;
-      string token;
-      string withdraw;
-      string tier;
-      string chainid;
-      string pooladdr;
-      string nonce;
-    }
+    // struct Str {
+    //   string sender;
+    //   string token;
+    //   string withdraw;
+    //   string tier;
+    //   string chainid;
+    //   string pooladdr;
+    //   string nonce;
+    // }
 
-    /**
-     * @dev Verify signature, internal function
-     */
-    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) internal view returns(bool _isDone) {
-        require(_chainId == block.chainid, "Incorrect chain ID");
-        require(_poolAddress == address(this));
-        require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
-        bytes32 _matchHash;
-        bytes32 _hashForRecover;
-        address _recoveredAddress;
-        Str memory str;
-        str.sender = address2str(_clientAddress);
-        str.token = address2str(_tokenAddress);
-        str.withdraw = uint2str(_withdrawValue);
-        str.tier = uint2str(_tier);
-        str.chainid = uint2str(_chainId);
-        str.pooladdr = address2str(_poolAddress);
-        str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
-        _hashForRecover = hashingMessage(_matchHash);
-        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
-        require (_recoveredAddress == owner, "Incorrect signature");
-        _isDone = true;
-    }
+    // /**
+    //  * @dev Verify signature, internal function
+    //  */
+    // function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) internal view returns(bool _isDone) {
+    //     require(_chainId == block.chainid, "Incorrect chain ID");
+    //     require(_poolAddress == address(this));
+    //     require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
+    //     bytes32 _matchHash;
+    //     bytes32 _hashForRecover;
+    //     address _recoveredAddress;
+    //     Str memory str;
+    //     str.sender = address2str(_clientAddress);
+    //     str.token = address2str(_tokenAddress);
+    //     str.withdraw = uint2str(_withdrawValue);
+    //     str.tier = uint2str(_tier);
+    //     str.chainid = uint2str(_chainId);
+    //     str.pooladdr = address2str(_poolAddress);
+    //     str.nonce = uint2str(_nonce);
+    //     _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
+    //     _hashForRecover = hashingMessage(_matchHash);
+    //     _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
+    //     require (_recoveredAddress == owner, "Incorrect signature");
+    //     _isDone = true;
+    // }
 
     /**
      * @dev Tier 1 withdrawal
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
-        require (_verification, "Signature verification for instant withdrawal fails");
-        clientNonce[_clientAddress] = _nonce + 1;
-
-        instantWithdrawReserve[_clientAddress][_tokenAddress] += _withdrawValue;
-
-        int256 _recordWithdrawValue = int256(_withdrawValue);
-        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordWithdrawValue;
-
-        _isDone = true;
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool success) {
+        (bool success, bytes memory data) = workerContract.delegatecall(
+            abi.encodeWithSignature("verifyAndWithdrawFund(bytes, address, address, uint256, uint256, uint256, address, uint256)", _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce)
+        );
     }
 
     /**
      * @dev Tier 2 withdrawal
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
-        require (_verification, "Signature verification for queuing fails");
-        clientNonce[_clientAddress] = _nonce + 1;
-        queueCount[_tokenAddress] += 1;
-
-        withdrawalQueue[_clientAddress][_tokenAddress] += _queueValue;
-
-        int256 _recordQueueValue = int256(_queueValue);
-        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordQueueValue;
-
-        _isDone = true;
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool success) {
+        (bool success, bytes memory data) = workerContract.delegatecall(
+            abi.encodeWithSignature("verifyAndQueue(bytes, address, address, uint256, uint256, uint256, address, uint256)", _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce)
+        );
     }
 
     /**
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
     function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) external isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
         clientNonce[_clientAddress] = _nonce + 1;
@@ -500,3 +655,4 @@ contract MoneyPoolRaw {
         _isDone = true;
     }
 }
+
