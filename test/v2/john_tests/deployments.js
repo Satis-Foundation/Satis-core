@@ -7,6 +7,7 @@ require('@nomiclabs/hardhat-web3');
 
 describe ("Test Signature", function() {
     it ("Account Signature", async function() {
+        this.timeout(5000);
 
         const signers = await ethers.getSigners();
         console.log("Number of accounts: " + signers.length);
@@ -39,7 +40,8 @@ describe ("Test Signature", function() {
             //   MultiSig: multi_sig.address,
             // },
         }, pool_owner);
-        const raw = await raw_contract.deploy(action.address, action.address, worker.address, {gasLimit: 1e7 });
+        // const raw = await raw_contract.deploy(action.address, action.address, worker.address, {gasLimit: 1e7 });
+        const raw = await raw_contract.deploy(action.address, action.address, worker.address);
         console.log(`Pool raw contract deployed at ${raw.address}`);
 
         // console.log(await raw.connect(pool_owner).getClientNonce(pool_owner.address));
@@ -63,4 +65,4 @@ describe ("Test Signature", function() {
 
         // verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce)
     })
-}).timeout(1000000);
+});

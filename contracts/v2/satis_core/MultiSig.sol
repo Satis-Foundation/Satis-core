@@ -123,4 +123,28 @@ library MultiSig {
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         return _recoveredAddress == _targetAddress;
     }
+
+    /**
+     * @dev Verify signature, internal function
+     */
+    function test_verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(bytes32 _matchHash, bytes32 _hashForRecover, address _recoveredAddress) {
+        // require(_chainId == block.chainid, "Incorrect chain ID");
+        // require(_poolAddress == address(this));
+        // require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
+        // bytes32 _matchHash;
+        // bytes32 _hashForRecover;
+        // address _recoveredAddress;
+        Str memory str;
+        str.sender = address2str(_clientAddress);
+        str.token = address2str(_tokenAddress);
+        str.withdraw = uint2str(_withdrawValue);
+        str.tier = uint2str(_tier);
+        str.chainid = uint2str(_chainId);
+        str.pooladdr = address2str(_poolAddress);
+        str.nonce = uint2str(_nonce);
+        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
+        _hashForRecover = hashingMessage(_matchHash);
+
+        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
+    }
 }
