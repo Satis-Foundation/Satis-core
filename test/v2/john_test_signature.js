@@ -26,17 +26,40 @@ describe ("Test Signature", function() {
         const action = await action_contract.deploy(pool_owner.address);
         console.log(`Action contract deployed at ${action.address}`);
 
-        const raw_contract = await ethers.getContractFactory("contracts/v2/satis_core/MoneyPoolRaw.sol:MoneyPoolRaw", {
+        const worker_contract = await ethers.getContractFactory("contracts/v2/satis_core/MoneyPoolRaw.sol:MoneyPoolWorker", {
             libraries: {
               MultiSig: multi_sig.address,
             },
         }, pool_owner);
-        const pool = await raw_contract.deploy(action.address, action.address, {gasLimit: 1e7 });
-        console.log(`Pool raw contract 1 deployed at ${pool.address}`);
+        const worker = await worker_contract.deploy();
+        console.log(`Worker contract deployed at ${worker.address}`);
+
+        const raw_contract = await ethers.getContractFactory("contracts/v2/satis_core/MoneyPoolRaw.sol:MoneyPoolRaw", {
+            // libraries: {
+            //   MultiSig: multi_sig.address,
+            // },
+        }, pool_owner);
+        const raw = await raw_contract.deploy(action.address, action.address, worker.address, {gasLimit: 1e7 });
+        console.log(`Pool raw contract deployed at ${raw.address}`);
+
+        // console.log(await raw.connect(pool_owner).getClientNonce(pool_owner.address));
+        console.log(await raw.clientNonce(pool_owner.address));
+        
+        // raw.connect(pool_owner).verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce)
+        await raw.connect(pool_owner).addNonce();
+        console.log(await raw.clientNonce(pool_owner.address));
+
+        // console.log(await raw.connect(pool_owner).getClientNonce(pool_owner.address));
+        
+        // raw.connect(pool_owner).verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce)
+        await raw.connect(pool_owner).addNonce();
+
+        // console.log(await raw.connect(pool_owner).getClientNonce(pool_owner.address));
+        console.log(await raw.clientNonce(pool_owner.address));
 
         const proxy_contract = await ethers.getContractFactory("contracts/v2/satis_core/MoneyPoolProxy.sol:MoneyPoolV2", pool_owner);
         const proxy = await proxy_contract.deploy([], [], action.address);
-        console.log(`Action contract deployed at ${proxy.address}`);
+        console.log(`Proxy deployed at ${proxy.address}`);
 
         // verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce)
     })
