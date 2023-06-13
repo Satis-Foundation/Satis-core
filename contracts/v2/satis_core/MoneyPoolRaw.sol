@@ -6,223 +6,12 @@ import "../lib_and_interface/Address.sol";
 import "../lib_and_interface/IERC20.sol";
 import "../lib_and_interface/SafeERC20.sol";
 
+library MultiSig {
+    event Debug(string msg);
 
-/**
- * This contract is a simple money pool for deposit.
- * It supports transfer and withdrawal of assets (ETH and ERC20 tokens).
- *
- * This contract uses Openzeppelin's library for ERC20 tokens.
- * When deploying on certain L2s (such as Optimism), it might require slight modifications
- * of the original ERC20 token library, since some ETH functions might not be supported.
- */
-
-
-contract MoneyPoolRaw {
-
-    using SafeERC20 for IERC20;
-
-    mapping (address => mapping (address => int256)) public clientDepositRecord;
-    mapping (address => uint256) public totalLockedAssets;
-    mapping (address => mapping (address => uint256)) public instantWithdrawReserve;
-    mapping (address => mapping (address => uint256)) public withdrawalQueue;
-    mapping (address => uint256) public queueCount;
-    mapping (address => uint256) public clientNonce;
-    mapping (address => uint256) public satisTokenBalance;
-    mapping (address => bool) public workerList;
-
-    address public owner;
-    address public proxy;
-    address public sigmaProxy;
-
-    event WorkerTakeLockedFund(address workerAddress, address tokenAddress, uint256 takeValue);
-    event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
-    event WorkerDumpInstantWithdrawFund(address workerAddress, address[] _clientAddressList, address _tokenAddress, uint256[] _instantWithdrawValueList);
-    event OwnerTakeProfit(address tokenAddress, uint256 takeProfitValue);
-
-    event ChangeOwnership(address newOwner);
-    event AddWorkers(address[] addWorkerList);
-    event RemoveWorkers(address[] removeWorkerList);
-    event ChangeProxy(address newProxy);
-    event ChangeSigmaProxy(address newSigmaProxy);
-
-    modifier isOwner() {
-        require (msg.sender == owner, "Not an admin");
-        _;
-    }
-
-    modifier isWorker() {
-        require (workerList[msg.sender] == true, "Not a worker");
-        _;
-    }
-
-    modifier isProxy() {
-        require (msg.sender == proxy || msg.sender == sigmaProxy, "Please use proxy contract.");
-        _;
-    }
-
-    modifier sufficientRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _poolAmount) {
-        require (_totalDumpAmount > 0 || _queueValueList.length > 0, "Zero dump value and zero queue list length");
-        uint256 _queueValue;
-        for (uint256 i = 0; i < _queueValueList.length; i++) {
-            _queueValue += _queueValueList[i];
-        }
-        require (_queueValue <= _poolAmount + _totalDumpAmount, "Dump value + pool assets < queue value sum");
-        _;
-    }
-
-    modifier correctSignatureLength(bytes memory _targetSignature) {
+    function recoverSignature(bytes32 _targetHash, bytes memory _targetSignature) internal pure returns(address) {
         require (_targetSignature.length == 65, "Incorrect signature length, length must be 65");
-        _;
-    }
-
-    /**
-     * @dev Sets the value for {owner}, owner is also a worker.
-     */
-    constructor(address _initialProxyAddress, address _initialSigmaProxyAddress) {
-        require(_initialProxyAddress != address(0), "Zero address for proxy");
-        require(_initialSigmaProxyAddress != address(0), "Zero address for sigma proxy");
-        owner = msg.sender;
-        workerList[owner] = true;
-        proxy = _initialProxyAddress;
-        sigmaProxy = _initialSigmaProxyAddress;
-    }
-
-    /**
-     * @dev Returns client's withdraw nonce.
-     */
-    function getClientNonce(address _clientAddress) public view returns(uint256) {
-        return clientNonce[_clientAddress];
-    }
-
-    /**
-     * @dev Returns client's net deposit value on this pool (can be negative).
-     */
-    function getClientDepositRecord(address _clientAddress, address _tokenAddress) public view returns(int256) {
-        return clientDepositRecord[_clientAddress][_tokenAddress];
-    }
-
-    /**
-     * @dev Returns total liquidity available in this pool (excluded client's withdrawal reserves).
-     */
-    function getLiquidityAmountInPool(address _tokenAddress) public view returns(uint256) {
-        return totalLockedAssets[_tokenAddress];
-    }
-
-    /**
-     * @dev Returns total SATIS token in this pool for Sigma Mining.
-     */
-    function getSatisTokenAmountInPool(address _tokenAddress) public view returns(uint256) {
-        return satisTokenBalance[_tokenAddress];
-    }
-
-    /**
-     * @dev Returns client's queued value.
-     */
-    function getClientQueueValue(address[] memory _clientAddressList, address _tokenAddress) public view returns(uint256[] memory) {
-        uint256[] memory queueValueList = new uint256[](_clientAddressList.length);
-        for (uint i = 0; i < _clientAddressList.length; i++) {
-            queueValueList[i] = (withdrawalQueue[_clientAddressList[i]][_tokenAddress]);
-        }
-        return queueValueList;
-    }
-
-    /**
-     * @dev Returns client's fast lane value.
-     */
-    function getClientInstantWithdrawReserve(address[] memory _clientAddressList, address _tokenAddress) public view returns(uint256[] memory) {
-        uint256[] memory reserveValueList = new uint256[](_clientAddressList.length);
-        for (uint i = 0; i < _clientAddressList.length; i++) {
-            reserveValueList[i] = (instantWithdrawReserve[_clientAddressList[i]][_tokenAddress]);
-        }
-        return reserveValueList;
-    }
-
-    /**
-     * @dev Returns current queue count of a token.
-     */
-    function getQueueCount(address _tokenAddress) external view returns(uint256) {
-        return queueCount[_tokenAddress];
-    }
-
-    /**
-     * @dev Transfer the ownership of this contract.
-     */
-    function transferOwnership(address _newOwner) public isOwner {
-        require(_newOwner != address(0), "Zero address for new owner");
-        workerList[owner] = false;
-        owner = _newOwner;
-        workerList[owner] = true;
-        emit ChangeOwnership(_newOwner);
-    }
-
-    /**
-     * @dev Add workers to this contract.
-     */
-    function addWorkers(address[] memory _addWorkerList) external isOwner {
-        for(uint256 i=0; i < _addWorkerList.length; i++) {
-            workerList[_addWorkerList[i]] = true;
-        }
-        emit AddWorkers(_addWorkerList);
-    }
-
-    /**
-     * @dev Remove workers from this contract.
-     */
-    function removeWorkers(address[] memory _removeWorkerList) external isOwner {
-        for(uint256 i=0; i < _removeWorkerList.length; i++) {
-            workerList[_removeWorkerList[i]] = false;
-        }
-        emit RemoveWorkers(_removeWorkerList);
-    }
-
-    /**
-     * @dev Update proxy contract address.
-     */
-    function updateProxyAddress(address _newProxyAddress) public isWorker {
-        require(_newProxyAddress != address(0), "Zero address for new proxy");
-        proxy = _newProxyAddress;
-        emit ChangeProxy(_newProxyAddress);
-    }
-
-    /**
-     * @dev Update sigma mining proxy contract address.
-     */
-    function updateSigmaProxyAddress(address _newSigmaProxyAddress) public isWorker {
-        require(_newSigmaProxyAddress != address(0), "Zero address for new sigma proxy");
-        sigmaProxy = _newSigmaProxyAddress;
-        emit ChangeSigmaProxy(_newSigmaProxyAddress);
-    }
-
-    /**
-     * @dev Show pool owner.
-     */
-    function getPoolOwner() public view returns(address _admin) {
-        _admin = owner;
-    }
-
-    /**
-     * @dev Check if an address is a worker.
-     */
-    function verifyWorker(address _workerAddress) public view returns(bool _isWorker) {
-        _isWorker = workerList[_workerAddress];
-    }
-
-    /**
-     * @dev Transfers and lock fund within this contract to support trading positions with optional trading instructions.
-     */
-    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue) external isProxy returns(bool _isDone) {
-        IERC20 depositToken = IERC20(_tokenAddress);
-        int256 _recordAddValue = int256(_addValue);
-        depositToken.safeTransferFrom(_clientAddress, address(this), _addValue);
-        clientDepositRecord[_clientAddress][_tokenAddress] += _recordAddValue;
-        totalLockedAssets[_tokenAddress] += _addValue;
-        _isDone = true;
-    }
-
-    /**
-     * @dev Internal function, recover signer from signature
-     */
-    function recoverSignature(bytes32 _targetHash, bytes memory _targetSignature) public pure correctSignatureLength(_targetSignature) returns(address) {
+        
         bytes32 _r;
         bytes32 _s;
         uint8 _v;
@@ -307,6 +96,229 @@ contract MoneyPoolRaw {
         return string(str);
     }
 
+    struct Str {
+      string sender;
+      string token;
+      string withdraw;
+      string tier;
+      string chainid;
+      string pooladdr;
+      string nonce;
+    }
+
+    /**
+     * @dev Verify signature, internal function
+     */
+    // function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(bool) {
+    function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(bool) {
+        // require(_chainId == block.chainid, "Incorrect chain ID");
+        // require(_poolAddress == address(this));
+        // require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
+        bytes32 _matchHash;
+        bytes32 _hashForRecover;
+        address _recoveredAddress;
+        Str memory str;
+        str.sender = address2str(_clientAddress);
+        str.token = address2str(_tokenAddress);
+        str.withdraw = uint2str(_withdrawValue);
+        str.tier = uint2str(_tier);
+        str.chainid = uint2str(_chainId);
+        str.pooladdr = address2str(_poolAddress);
+        str.nonce = uint2str(_nonce);
+        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
+        _hashForRecover = hashingMessage(_matchHash);
+        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
+        return _recoveredAddress == _targetAddress;
+    }
+
+    /**
+     * @dev Verify signature, internal function
+     */
+    function test_verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(string memory) {
+        // require(_chainId == block.chainid, "Incorrect chain ID");
+        // require(_poolAddress == address(this));
+        // require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
+        bytes32 _matchHash;
+        bytes32 _hashForRecover;
+        address _recoveredAddress;
+        Str memory str;
+        str.sender = address2str(_clientAddress);
+        str.token = address2str(_tokenAddress);
+        str.withdraw = uint2str(_withdrawValue);
+        str.tier = uint2str(_tier);
+        str.chainid = uint2str(_chainId);
+        str.pooladdr = address2str(_poolAddress);
+        str.nonce = uint2str(_nonce);
+        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
+        _hashForRecover = hashingMessage(_matchHash);
+        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
+        return str.sender;
+    }
+}
+
+/**
+ * This contract is a simple money pool for deposit.
+ * It supports transfer and withdrawal of assets (ETH and ERC20 tokens).
+ *
+ * This contract uses Openzeppelin's library for ERC20 tokens.
+ * When deploying on certain L2s (such as Optimism), it might require slight modifications
+ * of the original ERC20 token library, since some ETH functions might not be supported.
+ */
+
+
+contract MoneyPoolRaw {
+
+    using SafeERC20 for IERC20;
+
+    mapping (address => mapping (address => int256)) public clientDepositRecord;
+    mapping (address => uint256) public totalLockedAssets;
+    mapping (address => mapping (address => uint256)) public instantWithdrawReserve;
+    mapping (address => mapping (address => uint256)) public withdrawalQueue;
+    mapping (address => uint256) public queueCount;
+    mapping (address => uint256) public clientNonce;
+    mapping (address => uint256) public satisTokenBalance;
+    mapping (address => bool) public workerList;
+
+    address public owner;
+    address public proxy;
+    address public sigmaProxy;
+
+    event WorkerTakeLockedFund(address workerAddress, address tokenAddress, uint256 takeValue);
+    event WorkerDumpBridgedFund(address workerAddress, address[] clientAddressList, address tokenAddress, uint256[] dumpValueList);
+    event WorkerDumpInstantWithdrawFund(address workerAddress, address[] _clientAddressList, address _tokenAddress, uint256[] _instantWithdrawValueList);
+    event OwnerTakeProfit(address tokenAddress, uint256 takeProfitValue);
+
+    event ChangeOwnership(address newOwner);
+    event AddWorkers(address[] addWorkerList);
+    event RemoveWorkers(address[] removeWorkerList);
+    event ChangeProxy(address newProxy);
+    event ChangeSigmaProxy(address newSigmaProxy);
+
+    modifier isOwner() {
+        require (msg.sender == owner, "Not an admin");
+        _;
+    }
+
+    modifier isWorker() {
+        require (workerList[msg.sender] == true, "Not a worker");
+        _;
+    }
+
+    modifier isProxy() {
+        require (msg.sender == proxy || msg.sender == sigmaProxy, "Please use proxy contract.");
+        _;
+    }
+
+    modifier sufficientRebalanceValue(uint256[] memory _queueValueList, uint256 _totalDumpAmount, uint256 _poolAmount) {
+        require (_totalDumpAmount > 0 || _queueValueList.length > 0, "Zero dump value and zero queue list length");
+        uint256 _queueValue;
+        for (uint256 i = 0; i < _queueValueList.length; i++) {
+            _queueValue += _queueValueList[i];
+        }
+        require (_queueValue <= _poolAmount + _totalDumpAmount, "Dump value + pool assets < queue value sum");
+        _;
+    }
+
+    modifier correctSignatureLength(bytes memory _targetSignature) {
+        require (_targetSignature.length == 65, "Incorrect signature length, length must be 65");
+        _;
+    }
+
+    /**
+     * @dev Sets the value for {owner}, owner is also a worker.
+     */
+    constructor(address _initialProxyAddress, address _initialSigmaProxyAddress) {
+        require(_initialProxyAddress != address(0), "Zero address for proxy");
+        require(_initialSigmaProxyAddress != address(0), "Zero address for sigma proxy");
+        owner = msg.sender;
+        workerList[owner] = true;
+        proxy = _initialProxyAddress;
+        sigmaProxy = _initialSigmaProxyAddress;
+    }
+
+    /**
+     * @dev Returns client's queued value.
+     */
+    function getClientQueueValue(address[] memory _clientAddressList, address _tokenAddress) public view returns(uint256[] memory) {
+        uint256[] memory queueValueList = new uint256[](_clientAddressList.length);
+        for (uint i = 0; i < _clientAddressList.length; i++) {
+            queueValueList[i] = (withdrawalQueue[_clientAddressList[i]][_tokenAddress]);
+        }
+        return queueValueList;
+    }
+
+    /**
+     * @dev Returns client's fast lane value.
+     */
+    function getClientInstantWithdrawReserve(address[] memory _clientAddressList, address _tokenAddress) public view returns(uint256[] memory) {
+        uint256[] memory reserveValueList = new uint256[](_clientAddressList.length);
+        for (uint i = 0; i < _clientAddressList.length; i++) {
+            reserveValueList[i] = (instantWithdrawReserve[_clientAddressList[i]][_tokenAddress]);
+        }
+        return reserveValueList;
+    }
+
+    /**
+     * @dev Transfer the ownership of this contract.
+     */
+    function transferOwnership(address _newOwner) public isOwner {
+        require(_newOwner != address(0), "Zero address for new owner");
+        workerList[owner] = false;
+        owner = _newOwner;
+        workerList[owner] = true;
+        emit ChangeOwnership(_newOwner);
+    }
+
+    /**
+     * @dev Add workers to this contract.
+     */
+    function addWorkers(address[] memory _addWorkerList) external isOwner {
+        for(uint256 i=0; i < _addWorkerList.length; i++) {
+            workerList[_addWorkerList[i]] = true;
+        }
+        emit AddWorkers(_addWorkerList);
+    }
+
+    /**
+     * @dev Remove workers from this contract.
+     */
+    function removeWorkers(address[] memory _removeWorkerList) external isOwner {
+        for(uint256 i=0; i < _removeWorkerList.length; i++) {
+            workerList[_removeWorkerList[i]] = false;
+        }
+        emit RemoveWorkers(_removeWorkerList);
+    }
+
+    /**
+     * @dev Update proxy contract address.
+     */
+    function updateProxyAddress(address _newProxyAddress) public isWorker {
+        require(_newProxyAddress != address(0), "Zero address for new proxy");
+        proxy = _newProxyAddress;
+        emit ChangeProxy(_newProxyAddress);
+    }
+
+    /**
+     * @dev Update sigma mining proxy contract address.
+     */
+    function updateSigmaProxyAddress(address _newSigmaProxyAddress) public isWorker {
+        require(_newSigmaProxyAddress != address(0), "Zero address for new sigma proxy");
+        sigmaProxy = _newSigmaProxyAddress;
+        emit ChangeSigmaProxy(_newSigmaProxyAddress);
+    }
+
+    /**
+     * @dev Transfers and lock fund within this contract to support trading positions with optional trading instructions.
+     */
+    function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue) external isProxy returns(bool _isDone) {
+        IERC20 depositToken = IERC20(_tokenAddress);
+        int256 _recordAddValue = int256(_addValue);
+        depositToken.safeTransferFrom(_clientAddress, address(this), _addValue);
+        clientDepositRecord[_clientAddress][_tokenAddress] += _recordAddValue;
+        totalLockedAssets[_tokenAddress] += _addValue;
+        _isDone = true;
+    }
+
     /**
      * @dev Worker unlock fund to instant withdrawal reserve.
      */
@@ -330,35 +342,10 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Verify signature, internal function
-     */
-    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) internal view returns(bool _isDone) {
-        require(_chainId == block.chainid, "Incorrect chain ID");
-        require(_poolAddress == address(this));
-        require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
-        bytes32 _matchHash;
-        bytes32 _hashForRecover;
-        address _recoveredAddress;
-        Str memory str;
-        str.sender = address2str(_clientAddress);
-        str.token = address2str(_tokenAddress);
-        str.withdraw = uint2str(_withdrawValue);
-        str.tier = uint2str(_tier);
-        str.chainid = uint2str(_chainId);
-        str.pooladdr = address2str(_poolAddress);
-        str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
-        _hashForRecover = hashingMessage(_matchHash);
-        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
-        require (_recoveredAddress == owner, "Incorrect signature");
-        _isDone = true;
-    }
-
-    /**
      * @dev Tier 1 withdrawal
      */
     function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
         clientNonce[_clientAddress] = _nonce + 1;
 
@@ -374,7 +361,7 @@ contract MoneyPoolRaw {
      * @dev Tier 2 withdrawal
      */
     function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for queuing fails");
         clientNonce[_clientAddress] = _nonce + 1;
         queueCount[_tokenAddress] += 1;
@@ -391,7 +378,7 @@ contract MoneyPoolRaw {
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
     function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) external isProxy returns(bool _isDone) {
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
         clientNonce[_clientAddress] = _nonce + 1;

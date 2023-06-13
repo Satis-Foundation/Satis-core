@@ -9,21 +9,27 @@ require('@nomiclabs/hardhat-etherscan');
 
 module.exports = {
   solidity: {
-    version: '0.8.0',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 800,
+    compilers: [
+      {
+        version: "0.8.2",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 800,
+          },
+          metadata: {
+            bytecodeHash: 'none',
+          },
+        },
       },
-      metadata: {
-        bytecodeHash: 'none',
+      {
+        version: "0.4.24",
       },
-    },
+    ],
   },
   networks: {
     hardhat: {
-      allowUnlimitedContractSize: false,
+      allowUnlimitedContractSize: true,
     },
   },
-
 };
