@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node node_modules/mocha/bin/mocha.js",
+    "compile": "npx hardhat compile --no-typechain"
   },
   "keywords": [],
   "author": "",
@@ -45,6 +46,7 @@
     "@eth-optimism/hardhat-ovm": "^0.2.4",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/contracts": "^4.4.1",
+    "fs": "^0.0.1-security",
     "hardhat-typechain": "^0.3.5"
   }
 }
