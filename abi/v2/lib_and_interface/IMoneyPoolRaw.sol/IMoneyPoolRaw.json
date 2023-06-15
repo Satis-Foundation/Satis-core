@@ -38,14 +38,9 @@
           "internalType": "address",
           "name": "_clientAddress",
           "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_tokenAddress",
-          "type": "address"
         }
       ],
-      "name": "getClientDepositRecord",
+      "name": "clientNonce",
       "outputs": [
         {
           "internalType": "uint256",
@@ -83,25 +78,6 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "_clientAddress",
-          "type": "address"
-        }
-      ],
-      "name": "getClientNonce",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address[]",
           "name": "_clientAddressList",
           "type": "address[]"
@@ -124,27 +100,8 @@
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_tokenAddress",
-          "type": "address"
-        }
-      ],
-      "name": "getLiquidityAmountInPool",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [],
-      "name": "getPoolOwner",
+      "name": "owner",
       "outputs": [
         {
           "internalType": "address",
@@ -163,7 +120,7 @@
           "type": "address"
         }
       ],
-      "name": "getQueueCount",
+      "name": "queueCount",
       "outputs": [
         {
           "internalType": "uint256",
@@ -182,7 +139,26 @@
           "type": "address"
         }
       ],
-      "name": "getSatisTokenAmountInPool",
+      "name": "satisTokenBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_tokenAddress",
+          "type": "address"
+        }
+      ],
+      "name": "totalLockedAssets",
       "outputs": [
         {
           "internalType": "uint256",
