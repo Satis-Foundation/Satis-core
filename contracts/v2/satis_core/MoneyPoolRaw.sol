@@ -170,7 +170,6 @@ contract MoneyPoolRaw {
 
     using SafeERC20 for IERC20;
 
-    mapping (address => mapping (address => int256)) public clientDepositRecord;
     mapping (address => uint256) public totalLockedAssets;
     mapping (address => mapping (address => uint256)) public instantWithdrawReserve;
     mapping (address => mapping (address => uint256)) public withdrawalQueue;
@@ -312,9 +311,7 @@ contract MoneyPoolRaw {
      */
     function addFundWithAction(address _clientAddress, address _tokenAddress, uint256 _addValue) external isProxy returns(bool _isDone) {
         IERC20 depositToken = IERC20(_tokenAddress);
-        int256 _recordAddValue = int256(_addValue);
         depositToken.safeTransferFrom(_clientAddress, address(this), _addValue);
-        clientDepositRecord[_clientAddress][_tokenAddress] += _recordAddValue;
         totalLockedAssets[_tokenAddress] += _addValue;
         _isDone = true;
     }
@@ -325,8 +322,6 @@ contract MoneyPoolRaw {
     function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) public isWorker returns(bool _isDone) {
         for (uint i = 0; i < _clientAddressList.length; i++) {
             instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] += _tokenValueList[i];
-            int256 _recordWithdrawValue = int256(_tokenValueList[i]);
-            clientDepositRecord[_clientAddressList[i]][_tokenAddress] -= _recordWithdrawValue;
         }
         _isDone = true;
     }
@@ -345,14 +340,12 @@ contract MoneyPoolRaw {
      * @dev Tier 1 withdrawal
      */
     function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
         clientNonce[_clientAddress] = _nonce + 1;
 
         instantWithdrawReserve[_clientAddress][_tokenAddress] += _withdrawValue;
-
-        int256 _recordWithdrawValue = int256(_withdrawValue);
-        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordWithdrawValue;
 
         _isDone = true;
     }
@@ -361,15 +354,13 @@ contract MoneyPoolRaw {
      * @dev Tier 2 withdrawal
      */
     function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for queuing fails");
         clientNonce[_clientAddress] = _nonce + 1;
         queueCount[_tokenAddress] += 1;
 
         withdrawalQueue[_clientAddress][_tokenAddress] += _queueValue;
-
-        int256 _recordQueueValue = int256(_queueValue);
-        clientDepositRecord[_clientAddress][_tokenAddress] -= _recordQueueValue;
 
         _isDone = true;
     }

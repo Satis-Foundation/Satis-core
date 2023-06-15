@@ -8,35 +8,39 @@ pragma solidity ^0.8.0;
 
 interface IMoneyPoolRaw {
     /**
-     * @dev Returns client's nonce.
+     * @dev Returns client's withdraw nonce.
      */
-    function getClientNonce(address _clientAddress) external view returns(uint256);
+    function clientNonce(address _clientAddress) external view returns(uint256);
 
     /**
-     * @dev Returns client's balance.
+     * @dev Returns contract total assets of the type.
      */
-    function getClientDepositRecord(address _clientAddress, address _tokenAddress) external view returns(uint256);
-
-    /**
-     * @dev Returns client's locked balance.
-     */
-    function getLiquidityAmountInPool(address _tokenAddress) external view returns(uint256);
+    function totalLockedAssets(address _tokenAddress) external view returns(uint256);
 
     /**
      * @dev Returns total SATIS token in the contract.
      */
-    function getSatisTokenAmountInPool(address _tokenAddress) external view returns(uint256);
+    function satisTokenBalance(address _tokenAddress) external view returns(uint256);
 
+    /**
+     * @dev Get queued value for the list of clients
+     */
     function getClientQueueValue(address[] memory _clientAddressList, address _tokenAddress) external view returns(uint256[] memory);
 
+    /**
+     * @dev Get reserved value for the list of clients
+     */
     function getClientInstantWithdrawReserve(address[] memory _clientAddressList, address _tokenAddress) external view returns(uint256[] memory);
 
-    function getQueueCount(address _tokenAddress) external view returns(uint256);
+    /**
+     * @dev Get total queuing clients
+     */
+    function queueCount(address _tokenAddress) external view returns(uint256);
 
     /**
      * @dev Returns pool's owner address.
      */
-    function getPoolOwner() external view returns(address);
+    function owner() external view returns(address);
 
     /**
      * @dev Verify if an address is a worker.
