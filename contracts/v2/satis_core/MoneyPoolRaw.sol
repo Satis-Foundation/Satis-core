@@ -369,6 +369,7 @@ contract MoneyPoolRaw {
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
     function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) external isProxy returns(bool _isDone) {
+        require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
