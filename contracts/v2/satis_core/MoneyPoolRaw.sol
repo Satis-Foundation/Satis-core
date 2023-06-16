@@ -346,6 +346,7 @@ contract MoneyPoolRaw {
      * @dev Tier 1 withdrawal
      */
     function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
@@ -360,6 +361,7 @@ contract MoneyPoolRaw {
      * @dev Tier 2 withdrawal
      */
     function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+        require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification, "Signature verification for queuing fails");
@@ -375,6 +377,7 @@ contract MoneyPoolRaw {
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
     function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) external isProxy returns(bool _isDone) {
+        require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
         require (_verification == true, "Signature verification fails");
