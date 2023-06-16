@@ -319,9 +319,15 @@ contract MoneyPoolRaw {
     /**
      * @dev Worker unlock fund to instant withdrawal reserve.
      */
-    function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList) public isWorker returns(bool _isDone) {
-        for (uint i = 0; i < _clientAddressList.length; i++) {
-            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] += _tokenValueList[i];
+    function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList, uint256 _tier) public isWorker returns(bool _isDone) {
+        if (_tier == 2) {
+            for (uint i = 0; i < _clientAddressList.length; i++) {
+                withdrawalQueue[_clientAddressList[i]][_tokenAddress] -= _tokenValueList[i];
+            }
+        } else {
+            for (uint i = 0; i < _clientAddressList.length; i++) {
+                instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] -= _tokenValueList[i];
+            }
         }
         _isDone = true;
     }
