@@ -12,7 +12,7 @@ import * as sigmaActionArtifact from "../artifacts-zk/contracts/SigmaAction.sol/
 import * as rawPoolArtifact from "../artifacts-zk/contracts/MoneyPoolRaw.sol/MoneyPoolRaw.json";
 import * as proxyArtifact from "../artifacts-zk/contracts/MoneyPoolProxy.sol/MoneyPoolV2.json";
 import * as sigmaProxyArtifact from "../artifacts-zk/contracts/SigmaPoolProxy.sol/SigmaPoolV2.json";
-import * as zkc1Artifact from "../../c1/artifacts-zk/contracts/C5.sol/TestTokenCZK.json";
+import * as zkc1Artifact from "../artifacts-zk/contracts/C5.sol/TestTokenCZK.json";
 
 const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || "";
 const WORKER_PRIV_KEY = process.env.WORKER_PRIV_KEY || "";
