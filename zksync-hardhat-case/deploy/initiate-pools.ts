@@ -109,12 +109,12 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 
 
   // Add fund
-  const approveTx = await zkc1.connect(worker1).approve(rawPoolAddress, addAmount);
-  await approveTx.wait();
-  const addTx = await proxyContract.connect(worker1).addFundWithAction(zkc1Address, addAmount, "meow", poolName);
-  await addTx.wait();
-  console.log(`Add hash: ${addTx.hash}`);
-  console.log(`${addAmount/1e6} is added through proxy to ${rawPoolAddress}`);
+  //const approveTx = await zkc1.connect(worker1).approve(rawPoolAddress, addAmount);
+  //await approveTx.wait();
+  //const addTx = await proxyContract.connect(worker1).addFundWithAction(zkc1Address, addAmount, "meow", poolName);
+  //await addTx.wait();
+  //console.log(`Add hash: ${addTx.hash}`);
+  //console.log(`${addAmount/1e6} is added through proxy to ${rawPoolAddress}`);
 
 
   // Queue withdraw for workers --> can do estimation all the time without extra TX
@@ -130,9 +130,9 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   const worker1WithdrawTx = await proxyContract.connect(worker1).verifyAndWithdrawFund(worker1Signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, worker1WithdrawNonce, poolName);
   await worker1WithdrawTx.wait();
   console.log(`Worker 1 withdraw queue hash: ${worker1WithdrawTx.hash}`);
-  const worker2WithdrawTx = await proxyContract.connect(worker2).verifyAndWithdrawFund(worker2Signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, worker2WithdrawNonce, poolName);
+8561b60f3612  const worker2WithdrawTx = await proxyContract.connect(worker2).verifyAndWithdrawFund(worker2Signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, worker2WithdrawNonce, poolName);
   await worker2WithdrawTx.wait();
-  console.log(`Withdraw queue hash: ${worker2WithdrawTx.hash}`);
+  console.log(`Worker 2 withdraw queue hash: ${worker2WithdrawTx.hash}`);
 
   const reserveValue = await rawPool.connect(worker1).getClientInstantWithdrawReserve([worker1PubKey, worker2PubKey],zkc1Address);
   //const reserveValue = await rawPool.instantWithdrawReserve(userPubKey, zkc1Address);
