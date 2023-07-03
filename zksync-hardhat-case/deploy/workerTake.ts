@@ -14,8 +14,8 @@ import * as proxyArtifact from "../artifacts-zk/contracts/MoneyPoolProxy.sol/Mon
 import * as sigmaProxyArtifact from "../artifacts-zk/contracts/SigmaPoolProxy.sol/SigmaPoolV2.json";
 import * as zkc1Artifact from "../../c1/artifacts-zk/contracts/C5.sol/TestTokenCZK.json";
 
-const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || "";
-const WORKER_PRIV_KEY = process.env.WORKER_PRIV_KEY || "";
+//const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || "";
+const PRIVATE_KEY = process.env.WORKER_PRIV_KEY || "";
 
 if (!PRIVATE_KEY)
   throw "⛔️ Private key not detected! Add it to the .env file!";
@@ -26,15 +26,8 @@ const sigmaActionContractAddress = "0xDf78A1ddCAfCc84b5490BAC0AB1846a6B1572419";
 const proxyContractAddress = "0xDc99107e8232766d632D674a743093648dAACa62";
 const sigmaProxyContractAddress = "0xD4dc846f9717b1b481D71F4eaEdB1888972c17e6";
 const rawPoolAddress = "0x0A41E531abc8d74E850DFdF750d50bD58a1E3913";
-//const zkc1Address = "0x863e396Ac520bD845af42BA7ad8929f328B3fb61";
-const zkc1Address = "0x0faF6df7054946141266420b43783387A78d82A9";
-
-const signature = "0x3e71dcb267011ba231b891e418287920d1d11712d897343e9783caf519ebeb9060730c2a783ff8396ca20fc0c66819771fc4ca26ecb6d91d15cd8fd250c2512c1b";
-const worker1Addr = "0xa807F67e1953C64f746e3fE140150B25354adAC0";
-const withdrawFinal = 1;
-const tier = 1;
-const chainId = 280;
-
+const zkc1Address = "0x761effEdB46C36B3535B4ee780a88DE398BD2aD1";
+//const zkc1Address = "0x0faF6df7054946141266420b43783387A78d82A9";
 
 // An example of a deploy script that will deploy and call a simple contract.
 export default async function (hre: HardhatRuntimeEnvironment) {
@@ -43,8 +36,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   // Initialize the provider.
   // @ts-ignore
   const provider = new Provider(hre.userConfig.networks?.zkSyncTestnet?.url);
-  //const signer = new ethers.Wallet(PRIVATE_KEY, provider);
-  const signer = new ethers.Wallet(WORKER_PRIV_KEY, provider);
+  const signer = new ethers.Wallet(PRIVATE_KEY, provider);
 
   // Initialise contract instance
   const actionContract = new ethers.Contract(
@@ -92,10 +84,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 //   console.log(`Set Sigma Proxy to Raw Pool hash: ${setSigmaProxyToRawPoolTx.hash}`);
 //   console.log();
 
-  // Withdraw fund
-  const withdrawNonce = await proxyContract.getClientNonce(worker1Addr, "test");
-  console.log(`Withdraw nonce: ${withdrawNonce}`);
-  const withdrawTx = await proxyContract.verifyAndWithdrawFund(signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, withdrawNonce, "test");
-  await withdrawTx.wait();
-  console.log(`Withdraw queue hash: ${withdrawTx.hash}`);
+  const takeTx = await rawPool.workerTakeLockedFund(zkc1Address, String(1e12-1e8));
+  await takeTx.wait();
+  console.log(`Take hash: ${takeTx.hash}`);
 }

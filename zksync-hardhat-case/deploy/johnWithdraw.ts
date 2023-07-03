@@ -115,7 +115,19 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 
   const signature = await withdrawSignature(withdrawNonce, userPubKey, zkc1Address, withdrawFinal, tier, 280, rawPoolAddress);
 
+  const reserveValue = await rawPool.getClientInstantWithdrawReserve([userPubKey],zkc1Address);
+  //const reserveValue = await rawPool.instantWithdrawReserve(userPubKey, zkc1Address);
+  console.log(`Reserve value: ${reserveValue}`);
+
   const withdrawTx = await proxyContract.verifyAndWithdrawFund(signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, withdrawNonce, "test");
   await withdrawTx.wait();
   console.log(`Withdraw queue hash: ${withdrawTx.hash}`);
+
+  // Add fund
+  // const addValue = 448604706;
+  // const approveTx = await zkc1.approve(rawPoolAddress, addValue);
+  // await approveTx.wait();
+  // const addTx = await proxyContract.addFundWithAction(zkc1Address, addValue, "meow", "test");
+  // await addTx.wait();
+  // console.log(`Add hash: ${addTx.hash}`);
 }

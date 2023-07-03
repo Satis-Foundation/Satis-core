@@ -8,10 +8,11 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // load wallet private key from env file
-const PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || "";
+const PRIVATE_KEY = process.env.OWNER_PRIVATE_KEY || "";
+const poolName = process.env.POOL_NAME || "";
 
 if (!PRIVATE_KEY)
-  throw "⛔️ Private key not detected! Add it to the .env file!";
+  throw "⛔️ Deployer private key or pool name not detected! Add them to the .env file!";
 
 // An example of a deploy script that will deploy and call a simple contract.
 export default async function (hre: HardhatRuntimeEnvironment) {
@@ -63,21 +64,21 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   console.log();
 
   // Deploy Proxy
-  const deploymentFeeProxy = await deployer.estimateDeployFee(proxyArtifact, [["test"], [rawPoolAddress], actionContractAddress]);
+  const deploymentFeeProxy = await deployer.estimateDeployFee(proxyArtifact, [[poolName], [rawPoolAddress], actionContractAddress]);
   parsedFee = ethers.utils.formatEther(deploymentFeeProxy.toString());
   console.log(`Estimated deployment fee for Proxy: ${parsedFee} ETH`);
   deployGasCount += Number(parsedFee);
-  const proxyContract = await deployer.deploy(proxyArtifact, [["test"], [rawPoolAddress], actionContractAddress]);
+  const proxyContract = await deployer.deploy(proxyArtifact, [[poolName], [rawPoolAddress], actionContractAddress]);
   const proxyContractAddress = proxyContract.address;
   console.log(`${proxyArtifact.contractName} was deployed to ${proxyContractAddress}`);
   console.log();
 
   // Deploy Sigma Proxy
-  const deploymentFeeSigmaProxy = await deployer.estimateDeployFee(sigmaProxyArtifact, [["test"], [rawPoolAddress], sigmaActionContractAddress]);
+  const deploymentFeeSigmaProxy = await deployer.estimateDeployFee(sigmaProxyArtifact, [[poolName], [rawPoolAddress], sigmaActionContractAddress]);
   parsedFee = ethers.utils.formatEther(deploymentFeeSigmaProxy.toString());
   console.log(`Estimated deployment fee for Sigma Proxy: ${parsedFee} ETH`);
   deployGasCount += Number(parsedFee);
-  const sigmaProxyContract = await deployer.deploy(sigmaProxyArtifact, [["test"], [rawPoolAddress], sigmaActionContractAddress]);
+  const sigmaProxyContract = await deployer.deploy(sigmaProxyArtifact, [[poolName], [rawPoolAddress], sigmaActionContractAddress]);
   const sigmaProxyContractAddress = sigmaProxyContract.address;
   console.log(`${sigmaProxyArtifact.contractName} was deployed to ${sigmaProxyContractAddress}`);
   console.log();
