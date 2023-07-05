@@ -56,6 +56,18 @@ async function main() {
     const sigmaProxyUpdatePoolTX = await sigmaProxy.connect(deployer).changePool(newPoolNameList, newPoolAddrList);
     await sigmaProxyUpdatePoolTX.wait();
     console.log(`Raw pool address updated to ${newPoolAddrList}, pool name updated to ${newPoolNameList} in sigma proxy`);
+
+
+    // for (i in newPoolAddrList) {
+    //     var rawPoolInstance = await ethers.getContractFactory("MoneyPoolRaw");
+    //     var rawPool = await rawPoolInstance.attach(newPoolAddrList[i]);
+    //     var rawPoolUpdateProxyTx = await rawPool.connect(deployer).updateProxyAddress(proxyAddr);
+    //     await rawPoolUpdateProxyTx.wait();
+    //     console.log(`Proxy address updated to ${proxyAddr} in raw pool ${newPoolNameList[i]} at ${newPoolAddrList[i]}`);
+    //     var rawPoolUpdateSigmaProxyTX = await rawPool.connect(deployer).updateSigmaProxyAddress(sigmaProxyAddr);
+    //     await rawPoolUpdateSigmaProxyTX.wait();
+    //     console.log(`Sigma proxy address updated to ${sigmaProxyAddr} in raw pool ${newPoolNameList[i]} at ${newPoolAddrList[i]}`);
+    // }
 }
 
 
@@ -63,4 +75,4 @@ async function main() {
 main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
-  })8561b60f3612;
+  });

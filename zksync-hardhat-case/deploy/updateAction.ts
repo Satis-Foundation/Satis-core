@@ -96,4 +96,18 @@ export default async function (hre: HardhatRuntimeEnvironment) {
     await sigmaProxySetActionTX.wait();
     console.log(`Sigma action address updated to ${sigmaActionContractAddress} in sigma proxy`);
   }
+
+  // if (isUpdateAction == 1) {
+  //   // Set proxy address to action
+  //   const actionSetProxyTX = await actionContract.connect(owner).updateProxyContract(proxyContractAddress);
+  //   await actionSetProxyTX.wait();
+  //   console.log(`Proxy address updated to ${proxyContractAddress} in action`);
+  // }
+
+  // if (isUpdateSigmaAction == 1) {
+  //   // Set sigma proxy address to sigma action
+  //   const sigmaActionSetProxyTX = await sigmaActionContract.connect(owner).updateProxyContract(sigmaProxyContractAddress);
+  //   await sigmaActionSetProxyTX.wait();
+  //   console.log(`Sigma proxy address updated to ${sigmaProxyContractAddress} in sigma action`);
+  // }
 }

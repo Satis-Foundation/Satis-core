@@ -49,7 +49,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   const provider = new Provider(hre.userConfig.networks?.zkSyncTestnet?.url);
   const owner = new ethers.Wallet(OWNER_PRIV_KEY, provider);
 
-  // Initialise contract instance
+8561b60f3612  // Initialise contract instance
   const actionContract = new ethers.Contract(
     actionContractAddress,
     actionArtifact.abi,
@@ -92,4 +92,18 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   const sigmaProxySetPoolTX = await sigmaProxyContract.connect(owner).changeSigmaPool(newPoolNameList, newPoolAddrList);
   await sigmaProxySetPoolTX.wait();
   console.log(`Raw pool address updated to ${newPoolAddrList}, pool name updated to ${newPoolNameList} in sigma proxy`);
+
+  // // Set new proxy address to raw pool
+  // for (var i in newPoolAddrList) {
+  //   var rawPoolSetProxyTX = await rawPool.connect(owner).updateProxyAddress(proxyContractAddress);
+  //   await rawPoolSetProxyTX.wait();
+  //   console.log(`Proxy address updated to ${proxyContractAddress} in raw pool ${newPoolNameList[i]} at ${newPoolAddrList[i]}`);
+  // }
+
+  // // Set new sigma proxy address to raw pool
+  // for (var i in newPoolAddrList) {
+  //   var rawPoolSetSigmaProxyTX = await rawPool.connect(owner).updateSigmaProxyAddress(sigmaProxyContractAddress);
+  //   await rawPoolSetSigmaProxyTX.wait();
+  //   console.log(`Sigma proxy address updated to ${sigmaProxyContractAddress} in raw pool ${newPoolNameList[i]} at ${newPoolAddrList[i]}`);
+  // }
 }
