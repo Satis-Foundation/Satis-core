@@ -130,7 +130,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   const worker1WithdrawTx = await proxyContract.connect(worker1).verifyAndWithdrawFund(worker1Signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, worker1WithdrawNonce, poolName);
   await worker1WithdrawTx.wait();
   console.log(`Worker 1 withdraw queue hash: ${worker1WithdrawTx.hash}`);
-8561b60f3612  const worker2WithdrawTx = await proxyContract.connect(worker2).verifyAndWithdrawFund(worker2Signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, worker2WithdrawNonce, poolName);
+  const worker2WithdrawTx = await proxyContract.connect(worker2).verifyAndWithdrawFund(worker2Signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, worker2WithdrawNonce, poolName);
   await worker2WithdrawTx.wait();
   console.log(`Worker 2 withdraw queue hash: ${worker2WithdrawTx.hash}`);
 
