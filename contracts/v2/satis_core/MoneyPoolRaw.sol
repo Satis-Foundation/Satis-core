@@ -103,6 +103,7 @@ library MultiSig {
       string tier;
       string chainid;
       string pooladdr;
+      string expblockno;
       string nonce;
     }
 
@@ -110,7 +111,7 @@ library MultiSig {
      * @dev Verify signature, internal function
      */
     // function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(bool) {
-    function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(bool) {
+    function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) public pure returns(bool) {
         // require(_chainId == block.chainid, "Incorrect chain ID");
         // require(_poolAddress == address(this));
         // require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
@@ -124,35 +125,12 @@ library MultiSig {
         str.tier = uint2str(_tier);
         str.chainid = uint2str(_chainId);
         str.pooladdr = address2str(_poolAddress);
+        str.expblockno = uint2str(_expBlockNo);
         str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
+        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr, str.expblockno));
         _hashForRecover = hashingMessage(_matchHash);
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         return _recoveredAddress == _targetAddress;
-    }
-
-    /**
-     * @dev Verify signature, internal function
-     */
-    function test_verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(string memory) {
-        // require(_chainId == block.chainid, "Incorrect chain ID");
-        // require(_poolAddress == address(this));
-        // require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
-        bytes32 _matchHash;
-        bytes32 _hashForRecover;
-        address _recoveredAddress;
-        Str memory str;
-        str.sender = address2str(_clientAddress);
-        str.token = address2str(_tokenAddress);
-        str.withdraw = uint2str(_withdrawValue);
-        str.tier = uint2str(_tier);
-        str.chainid = uint2str(_chainId);
-        str.pooladdr = address2str(_poolAddress);
-        str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr));
-        _hashForRecover = hashingMessage(_matchHash);
-        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
-        return str.sender;
     }
 }
 
@@ -345,10 +323,11 @@ contract MoneyPoolRaw {
     /**
      * @dev Tier 1 withdrawal
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) public isProxy returns(bool _isDone) {
         require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
-        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _nonce);
+        require (_expBlockNo >= block.number, "Expired signature");
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _expBlockNo, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
         clientNonce[_clientAddress] = _nonce + 1;
 
@@ -360,10 +339,11 @@ contract MoneyPoolRaw {
     /**
      * @dev Tier 2 withdrawal
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public isProxy returns(bool _isDone) {
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) public isProxy returns(bool _isDone) {
         require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
-        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _nonce);
+        require (_expBlockNo >= block.number, "Expired signature");
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _expBlockNo, _nonce);
         require (_verification, "Signature verification for queuing fails");
         clientNonce[_clientAddress] = _nonce + 1;
         queueCount[_tokenAddress] += 1;
@@ -376,10 +356,11 @@ contract MoneyPoolRaw {
     /**
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) external isProxy returns(bool _isDone) {
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) external isProxy returns(bool _isDone) {
         require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
-        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _nonce);
+        require (_expBlockNo >= block.number, "Expired signature");
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _expBlockNo, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
         clientNonce[_clientAddress] = _nonce + 1;
