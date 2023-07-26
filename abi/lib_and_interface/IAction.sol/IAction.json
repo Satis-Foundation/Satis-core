@@ -40,6 +40,11 @@
     {
       "inputs": [
         {
+          "internalType": "string",
+          "name": "_ticketId",
+          "type": "string"
+        },
+        {
           "internalType": "address",
           "name": "_clientAddress",
           "type": "address"
@@ -53,14 +58,43 @@
           "internalType": "uint256",
           "name": "_tokenValue",
           "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "_tier",
-          "type": "uint256"
         }
       ],
       "name": "queueWithdraw",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_ticketId",
+          "type": "string"
+        },
+        {
+          "internalType": "address",
+          "name": "_clientAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_tokenAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_tokenValue",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawFund",
       "outputs": [
         {
           "internalType": "bool",

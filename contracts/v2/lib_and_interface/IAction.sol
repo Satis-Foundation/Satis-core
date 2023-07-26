@@ -12,5 +12,10 @@ interface IAction {
     /**
      * @dev Emit queue for withdraw event
      */
-    function queueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) external returns(bool);
+    function queueWithdraw(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+
+    /**
+     * @dev Emit withdraw event
+     */
+    function withdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
 }

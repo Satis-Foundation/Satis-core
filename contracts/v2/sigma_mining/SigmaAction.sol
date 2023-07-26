@@ -13,8 +13,9 @@ contract SigmaAction {
     address public proxy;
 
     event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
-    event Queue(address clientAddress, address tokenAddress, uint queueValue, uint256 tier);
-    event RedeemToken(address clientAddress, address tokenAddress, uint transactionValue);
+    event Queue(string ticketId, address clientAddress, address tokenAddress, uint queueValue);
+    event Withdraw(string ticketId, address clientAddress, address tokenAddress, uint withdrawValue);
+    event RedeemToken(string ticketId, address clientAddress, address tokenAddress, uint transactionValue);
     event ChangeOwnership(address newOwner);
     event ChangeSigmaProxy(address newSigmaProxy);
 
@@ -64,8 +65,16 @@ contract SigmaAction {
     /**
      * @dev Emit queue event on chain
      */
-    function sigmaQueueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) public isProxy returns(bool _isDone) {
-        emit Queue(_clientAddress, _tokenAddress, _tokenValue, _tier);
+    function sigmaQueueWithdraw(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
+        emit Queue(_ticketId, _clientAddress, _tokenAddress, _tokenValue);
+        _isDone = true;
+    }
+
+    /**
+     * @dev Emit withdraw event on chain
+     */
+    function sigmaWithdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
+        emit Withdraw(_ticketId, _clientAddress, _tokenAddress, _tokenValue);
         _isDone = true;
     }
 
@@ -80,8 +89,8 @@ contract SigmaAction {
     /**
      * @dev Redeem mined token
      */
-    function sigmaVerifyAndRedeemToken(address _clientAddress, address _tokenAddress, uint256 _redeemValue) public isProxy returns(bool _isDone) {
-        emit RedeemToken(_clientAddress, _tokenAddress, _redeemValue);
+    function sigmaVerifyAndRedeemToken(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _redeemValue) public isProxy returns(bool _isDone) {
+        emit RedeemToken(_ticketId, _clientAddress, _tokenAddress, _redeemValue);
         _isDone = true;
     }
 }

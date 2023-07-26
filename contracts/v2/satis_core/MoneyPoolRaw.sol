@@ -104,6 +104,7 @@ library MultiSig {
       string chainid;
       string pooladdr;
       string expblockno;
+      string ticketid;
       string nonce;
     }
 
@@ -111,11 +112,7 @@ library MultiSig {
      * @dev Verify signature, internal function
      */
     // function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(bool) {
-    function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) public pure returns(bool) {
-        // require(_chainId == block.chainid, "Incorrect chain ID");
-        // require(_poolAddress == address(this));
-        // require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
-        bytes32 _matchHash;
+    function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) public pure returns(bool) {
         bytes32 _hashForRecover;
         address _recoveredAddress;
         Str memory str;
@@ -126,9 +123,9 @@ library MultiSig {
         str.chainid = uint2str(_chainId);
         str.pooladdr = address2str(_poolAddress);
         str.expblockno = uint2str(_expBlockNo);
+        str.ticketid = _ticketId;
         str.nonce = uint2str(_nonce);
-        _matchHash = keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr, str.expblockno));
-        _hashForRecover = hashingMessage(_matchHash);
+        _hashForRecover = hashingMessage(keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr, str.expblockno, str.ticketid)));
         _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
         return _recoveredAddress == _targetAddress;
     }
@@ -149,9 +146,8 @@ contract MoneyPoolRaw {
     using SafeERC20 for IERC20;
 
     mapping (address => uint256) public totalLockedAssets;
-    mapping (address => mapping (address => uint256)) public instantWithdrawReserve;
+    mapping (string => mapping (address => uint256)) public instantWithdrawReserve;
     mapping (address => mapping (address => uint256)) public withdrawalQueue;
-    mapping (address => uint256) public queueCount;
     mapping (address => uint256) public clientNonce;
     mapping (address => uint256) public satisTokenBalance;
     mapping (address => bool) public workerList;
@@ -225,12 +221,12 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Returns client's fast lane value.
+     * @dev In debt cross-chain amount.
      */
-    function getClientInstantWithdrawReserve(address[] memory _clientAddressList, address _tokenAddress) public view returns(uint256[] memory) {
-        uint256[] memory reserveValueList = new uint256[](_clientAddressList.length);
-        for (uint i = 0; i < _clientAddressList.length; i++) {
-            reserveValueList[i] = (instantWithdrawReserve[_clientAddressList[i]][_tokenAddress]);
+    function getInstantWithdrawReserve(string[] memory _ticketIdList, address _tokenAddress) public view returns(uint256[] memory) {
+        uint256[] memory reserveValueList = new uint256[](_ticketIdList.length);
+        for (uint i = 0; i < _ticketIdList.length; i++) {
+            reserveValueList[i] = (instantWithdrawReserve[_ticketIdList[i]][_tokenAddress]);
         }
         return reserveValueList;
     }
@@ -297,15 +293,9 @@ contract MoneyPoolRaw {
     /**
      * @dev Worker unlock fund to instant withdrawal reserve.
      */
-    function workerUnlockFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _tokenValueList, uint256 _tier) public isWorker returns(bool _isDone) {
-        if (_tier == 2) {
-            for (uint i = 0; i < _clientAddressList.length; i++) {
-                withdrawalQueue[_clientAddressList[i]][_tokenAddress] -= _tokenValueList[i];
-            }
-        } else {
-            for (uint i = 0; i < _clientAddressList.length; i++) {
-                instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] -= _tokenValueList[i];
-            }
+    function workerUnlockFund(string[] memory _ticketIdList, address _tokenAddress, uint256[] memory _unlockValueList) public isWorker returns(bool _isDone) {
+        for (uint i = 0; i < _ticketIdList.length; i++) {
+            instantWithdrawReserve[_ticketIdList[i]][_tokenAddress] -= _unlockValueList[i];
         }
         _isDone = true;
     }
@@ -323,32 +313,32 @@ contract MoneyPoolRaw {
     /**
      * @dev Tier 1 withdrawal
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) public isProxy returns(bool _isDone) {
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) public isProxy returns(bool _isDone) {
         require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         require (_expBlockNo >= block.number, "Expired signature");
-        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _expBlockNo, _nonce);
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _expBlockNo, _ticketId, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
         clientNonce[_clientAddress] = _nonce + 1;
 
-        instantWithdrawReserve[_clientAddress][_tokenAddress] += _withdrawValue;
-
-        _isDone = true;
-    }
-
-    /**
-     * @dev Tier 2 withdrawal
-     */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _queueValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) public isProxy returns(bool _isDone) {
-        require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
-        require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
-        require (_expBlockNo >= block.number, "Expired signature");
-        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _queueValue, _tier, _chainId, _poolAddress, _expBlockNo, _nonce);
-        require (_verification, "Signature verification for queuing fails");
-        clientNonce[_clientAddress] = _nonce + 1;
-        queueCount[_tokenAddress] += 1;
-
-        withdrawalQueue[_clientAddress][_tokenAddress] += _queueValue;
+        // Check if native liquidity is enough for tier 3, and queue for tier 1
+        IERC20 token = IERC20(_tokenAddress);
+        if (_tier == 3) {
+            require(_withdrawValue <= totalLockedAssets[_tokenAddress], "Insufficient liquidity for tier 3 withdraw");
+            token.safeTransfer(_clientAddress, _withdrawValue);
+            totalLockedAssets[_tokenAddress] -= _withdrawValue;
+        } else if (_tier == 1) {
+            if (_withdrawValue > totalLockedAssets[_tokenAddress]) {
+                token.safeTransfer(_clientAddress, totalLockedAssets[_tokenAddress]);
+                instantWithdrawReserve[_ticketId][_tokenAddress] += (_withdrawValue - totalLockedAssets[_tokenAddress]);
+                totalLockedAssets[_tokenAddress] = 0;
+            } else {
+                token.safeTransfer(_clientAddress, _withdrawValue);
+                totalLockedAssets[_tokenAddress] -= _withdrawValue;
+            }
+        } else {
+            revert("Invalid tier");
+        }
 
         _isDone = true;
     }
@@ -356,11 +346,11 @@ contract MoneyPoolRaw {
     /**
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, uint256 _nonce) external isProxy returns(bool _isDone) {
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external isProxy returns(bool _isDone) {
         require (_nonce == clientNonce[_clientAddress], "Wrong withdraw nonce");
         require (_poolAddress == address(this) && _chainId == block.chainid, "Wrong chain / target contract");
         require (_expBlockNo >= block.number, "Expired signature");
-        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _expBlockNo, _nonce);
+        bool _verification = MultiSig.verifySignature(owner, _targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _expBlockNo, _ticketId, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
         clientNonce[_clientAddress] = _nonce + 1;
@@ -405,43 +395,9 @@ contract MoneyPoolRaw {
     }
 
     /**
-     * @dev Worker dumping crosschain fund from rebalancing.
-     */
-    function workerDumpRebalancedFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _queueValueList, uint256 _totalDumpAmount) external 
-    isWorker sufficientRebalanceValue(_queueValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
-        require (_clientAddressList.length == _queueValueList.length, "Lists length not match");
-        
-        // Normal rebalancing
-        IERC20 dumpToken = IERC20(_tokenAddress);
-        if (_totalDumpAmount > 0) {
-            dumpToken.safeTransferFrom(msg.sender, address(this), _totalDumpAmount);
-            totalLockedAssets[_tokenAddress] += _totalDumpAmount;
-        }
-
-        // Send all fund to queued users
-        if (_clientAddressList.length != 0) {
-            for (uint256 i=0; i < _clientAddressList.length; i++) {
-                dumpToken.safeTransfer(_clientAddressList[i], _queueValueList[i]);
-                totalLockedAssets[_tokenAddress] -= _queueValueList[i];
-                withdrawalQueue[_clientAddressList[i]][_tokenAddress] -= _queueValueList[i];
-            }
-            emit WorkerDumpBridgedFund(msg.sender, _clientAddressList, _tokenAddress, _queueValueList);
-        }
-
-        // Reset queue count
-        if (_clientAddressList.length >= queueCount[_tokenAddress]) {
-            queueCount[_tokenAddress] = 0;
-        } else {
-            queueCount[_tokenAddress] -= _clientAddressList.length;
-        }
-
-        _isDone = true;
-    }
-
-    /**
      * @dev Worker dumping fund for instant withdrawal.
      */
-    function workerDumpInstantWithdrawalFund(address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _instantWithdrawValueList, uint256 _totalDumpAmount) external 
+    function workerDumpInstantWithdrawalFund(string[] memory _ticketIdList, address[] memory _clientAddressList, address _tokenAddress, uint256[] memory _instantWithdrawValueList, uint256 _totalDumpAmount) external 
     isWorker sufficientRebalanceValue(_instantWithdrawValueList, _totalDumpAmount, totalLockedAssets[_tokenAddress]) returns(bool _isDone) {
         IERC20 dumpToken = IERC20(_tokenAddress);
         if (_totalDumpAmount > 0) {
@@ -451,7 +407,7 @@ contract MoneyPoolRaw {
         for (uint256 i=0; i < _clientAddressList.length; i++) {
             dumpToken.safeTransfer(_clientAddressList[i], _instantWithdrawValueList[i]);
             totalLockedAssets[_tokenAddress] -= _instantWithdrawValueList[i];
-            instantWithdrawReserve[_clientAddressList[i]][_tokenAddress] -= _instantWithdrawValueList[i];
+            instantWithdrawReserve[_ticketIdList[i]][_tokenAddress] -= _instantWithdrawValueList[i];
         }
         emit WorkerDumpInstantWithdrawFund(msg.sender, _clientAddressList, _tokenAddress, _instantWithdrawValueList);
         _isDone = true;

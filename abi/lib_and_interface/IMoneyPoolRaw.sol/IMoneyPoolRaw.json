@@ -64,7 +64,7 @@
           "type": "address"
         }
       ],
-      "name": "getClientInstantWithdrawReserve",
+      "name": "getClientQueueValue",
       "outputs": [
         {
           "internalType": "uint256[]",
@@ -78,9 +78,9 @@
     {
       "inputs": [
         {
-          "internalType": "address[]",
-          "name": "_clientAddressList",
-          "type": "address[]"
+          "internalType": "string[]",
+          "name": "_ticketIdList",
+          "type": "string[]"
         },
         {
           "internalType": "address",
@@ -88,7 +88,7 @@
           "type": "address"
         }
       ],
-      "name": "getClientQueueValue",
+      "name": "getInstantWithdrawReserve",
       "outputs": [
         {
           "internalType": "uint256[]",
@@ -107,25 +107,6 @@
           "internalType": "address",
           "name": "",
           "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_tokenAddress",
-          "type": "address"
-        }
-      ],
-      "name": "queueCount",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -188,7 +169,7 @@
         },
         {
           "internalType": "uint256",
-          "name": "_queueValue",
+          "name": "_withdrawValue",
           "type": "uint256"
         },
         {
@@ -210,6 +191,11 @@
           "internalType": "uint256",
           "name": "_expBlockNo",
           "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_ticketId",
+          "type": "string"
         },
         {
           "internalType": "uint256",
@@ -271,6 +257,11 @@
           "type": "uint256"
         },
         {
+          "internalType": "string",
+          "name": "_ticketId",
+          "type": "string"
+        },
+        {
           "internalType": "uint256",
           "name": "_nonce",
           "type": "uint256"
@@ -328,6 +319,11 @@
           "internalType": "uint256",
           "name": "_expBlockNo",
           "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_ticketId",
+          "type": "string"
         },
         {
           "internalType": "uint256",
