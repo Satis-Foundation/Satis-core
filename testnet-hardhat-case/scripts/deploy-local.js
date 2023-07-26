@@ -203,6 +203,9 @@ async function main() {
     console.log(`Worker 2 reserved value (after): ${worker2ReservedValue}`);
     console.log();
 
+    var batchGet = await rawPool.getInstantWithdrawReserve([ticket_id], token.address);
+    console.log(`Batch get function res: ${batchGet}`);
+
     console.log(`Basic test done`);
 
     console.log(`Following tier 3 bridging must fail`);
@@ -213,7 +216,7 @@ async function main() {
     tier = 3;
     console.log(`Signing withdraw signature:`)
     var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id);
-    const tier3WithdrawBridgeTx = await proxy.connect(worker2).verifyAndWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, "satis-v2");
+    const tier3WithdrawBridgeTx = await proxy.connect(worker2).verifyAndPartialWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, "satis-v2");
     await tier3WithdrawBridgeTx.wait();
     console.log(`Tier 3 withdraw hash: ${tier3WithdrawBridgeTx.hash}`);
     liquidityInPool = await rawPool.totalLockedAssets(token.address);

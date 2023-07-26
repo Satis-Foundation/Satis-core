@@ -21,9 +21,9 @@ const { ConsoleLogger } = require("ts-generator/dist/logger");
 
 
 const usdcAddress = "0xd35CCeEAD182dcee0F148EbaC9447DA2c4D449c4";
-const proxyAddr = "0xaF65f2Cb96D25a8967B2Af6145591304Aac84EAC";
-const rawPoolAddr = "0x905b7c16dFd57dcE95fd78aDb3c9290109f64958";
-const multiSigAddr = "0x478d33e5B2a7655CBce1971B6D50590EF0D8479a";
+const proxyAddr = "0x89D1CC8D3f4Cc0b3De9D7f287B6269364f5fe598";
+const rawPoolAddr = "0x27E9e0843Fc6Ba954298328Bedc9791A0992f860";
+const multiSigAddr = "0x9be5ABf84D4a439ef82bA72e690370db9a52667A";
 
 
 

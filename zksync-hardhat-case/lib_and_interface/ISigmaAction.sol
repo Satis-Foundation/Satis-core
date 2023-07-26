@@ -12,10 +12,15 @@ interface ISigmaAction {
     /**
      * @dev Emit unlock fund event
      */
-    function sigmaQueueWithdraw(address _clientAddress, address _tokenAddress, uint256 _tokenValue, uint256 _tier) external returns(bool);
+    function sigmaQueueWithdraw(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+
+    /**
+     * @dev Emit withdraw fund event
+     */
+    function sigmaWithdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
 
     /**
      * @dev Emit redeem fund event
      */
-    function sigmaVerifyAndRedeemToken(address _clientAddress, address _tokenAddress, uint256 _redeemValue) external returns(bool);
+    function sigmaVerifyAndRedeemToken(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _redeemValue) external returns(bool);
 }

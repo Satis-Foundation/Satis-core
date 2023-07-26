@@ -49,7 +49,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   const provider = new Provider(hre.userConfig.networks?.zkSyncTestnet?.url);
   const owner = new ethers.Wallet(OWNER_PRIV_KEY, provider);
 
-8561b60f3612  // Initialise contract instance
+  // Initialise contract instance
   const actionContract = new ethers.Contract(
     actionContractAddress,
     actionArtifact.abi,

@@ -8,7 +8,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // load wallet private key from env file
-const PRIVATE_KEY = process.env.OWNER_PRIVATE_KEY || "";
+const PRIVATE_KEY = process.env.OWNER_PRIV_KEY || "";
 const poolName = process.env.POOL_NAME || "";
 
 if (!PRIVATE_KEY)
