@@ -23,13 +23,13 @@ const { ConsoleLogger } = require("ts-generator/dist/logger");
 
 
 
-async function withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id) {
+async function withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id) {
 
     const signers = await ethers.getSigners();
     const owner = signers[0];
 
     const abiCoder = new ethers.utils.AbiCoder();
-    const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
+    const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), in_debt.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
     const byteMsg = ethers.utils.arrayify(encodeHash);
     const signature = await owner.signMessage(byteMsg);
     
@@ -159,17 +159,18 @@ async function main() {
     var nonce = await rawPool.clientNonce(worker1.address);
     var client_address = worker1.address;
     var token_address = tokenAddress;
-    var withdraw_final = 1;
+    var withdraw_final = 0;
+    var in_debt = 1;
     var tier = 1;
     var pool_address = rawPool.address;
     var exp_block_no = 100000000;
     var ticket_id = "worker1-test";
     console.log(`Signing withdraw signature:`)
-    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id);
-    var tier1WithdrawTx = await proxy.connect(worker1).verifyAndWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, poolName);
+    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id);
+    var tier1WithdrawTx = await proxy.connect(worker1).verifyAndWithdrawFund(signature, token_address, withdraw_final, in_debt, tier, exp_block_no, ticket_id, nonce, poolName);
     await tier1WithdrawTx.wait();
     console.log(`Worker 1 tier 1 withdraw hash: ${tier1WithdrawTx.hash}`);
-    var worker2ReservedValue = await rawPool.connect(worker1).instantWithdrawReserve("worker1-test1", tokenAddress);
+    var worker2ReservedValue = await rawPool.connect(worker1).instantWithdrawReserve("worker1-test", tokenAddress);
     console.log(`Worker 1 reserved value: ${worker2ReservedValue}`);
     nonce = await rawPool.clientNonce(worker1.address);
     console.log(`Worker 1 updated nonce: ${nonce}`);
@@ -180,13 +181,14 @@ async function main() {
     var nonce = await rawPool.clientNonce(worker2.address);
     var client_address = worker2.address;
     var token_address = tokenAddress;
-    var withdraw_final = 1;
+    var withdraw_final = 0;
+    var in_debt = 1;
     var tier = 1;
     var pool_address = rawPool.address;
     ticket_id = "worker2-test";
     console.log(`Signing withdraw signature:`)
-    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id);
-    var tier1WithdrawTx = await proxy.connect(worker2).verifyAndWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, poolName);
+    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id);
+    var tier1WithdrawTx = await proxy.connect(worker2).verifyAndWithdrawFund(signature, token_address, withdraw_final, in_debt, tier, exp_block_no, ticket_id, nonce, poolName);
     await tier1WithdrawTx.wait();
     console.log(`Worker 2 tier 1 withdraw hash: ${tier1WithdrawTx.hash}`);
     var worker2ReservedValue = await rawPool.connect(worker2).instantWithdrawReserve("worker2-test", tokenAddress);

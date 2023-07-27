@@ -173,10 +173,10 @@ contract MoneyPoolV2 {
         require(_tier == 1, "Wrong function called for withdraw tier");
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
+        poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
-        _isDone = _withdrawDone && _eventDone;
+        actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
+        _isDone = true;
     }
 
     /**
@@ -186,10 +186,10 @@ contract MoneyPoolV2 {
         require(_tier == 2, "Wrong function called for withdraw tier");
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _queueDone = poolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
+        poolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.queueWithdraw(_ticketId, msg.sender, _tokenAddress, _queueValue);
-        _isDone = _queueDone && _eventDone;
+        actionContract.queueWithdraw(_ticketId, msg.sender, _tokenAddress, _queueValue);
+        _isDone = true;
     }
 
     /**
@@ -199,9 +199,9 @@ contract MoneyPoolV2 {
         require(_tier == 3, "Wrong function called for withdraw tier");
         require(poolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
-        bool _withdrawDone = poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
+        poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
-        _isDone = _withdrawDone && _eventDone;
+        actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
+        _isDone = true;
     }
 }

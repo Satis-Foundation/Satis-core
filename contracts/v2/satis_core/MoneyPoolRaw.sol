@@ -114,7 +114,6 @@ library MultiSig {
      */
     // function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _nonce) public pure returns(bool) {
     function verifySignature(address _targetAddress, bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) public pure returns(bool) {
-        bytes32 _hashForRecover;
         Str memory str;
         str.sender = address2str(_clientAddress);
         str.token = address2str(_tokenAddress);
@@ -126,8 +125,7 @@ library MultiSig {
         str.expblockno = uint2str(_expBlockNo);
         str.ticketid = _ticketId;
         str.nonce = uint2str(_nonce);
-        _hashForRecover = hashingMessage(keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.indebt, str.tier, str.chainid, str.pooladdr, str.expblockno, str.ticketid)));
-        return recoverSignature(_hashForRecover, _targetSignature) == _targetAddress;
+        return recoverSignature(hashingMessage(keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.indebt, str.tier, str.chainid, str.pooladdr, str.expblockno, str.ticketid))), _targetSignature) == _targetAddress;
     }
 }
 
@@ -317,8 +315,11 @@ contract MoneyPoolRaw {
             token.safeTransfer(_clientAddress, _withdrawValue);
             totalLockedAssets[_tokenAddress] -= _withdrawValue;
         } else if (_tier == 1) {
-            token.safeTransfer(_clientAddress, _withdrawValue);
-            totalLockedAssets[_tokenAddress] -= _withdrawValue;
+            require(_inDebtValue > 0 || _withdrawValue > 0, "Total withdraw amount is 0");
+            if (_withdrawValue > 0) {
+                token.safeTransfer(_clientAddress, _withdrawValue);
+                totalLockedAssets[_tokenAddress] -= _withdrawValue;
+            }
             if (_inDebtValue > 0) {
                 instantWithdrawReserve[_ticketId][_tokenAddress] += _inDebtValue;
             }

@@ -320,8 +320,11 @@ contract MoneyPoolRaw {
             token.safeTransfer(_clientAddress, _withdrawValue);
             totalLockedAssets[_tokenAddress] -= _withdrawValue;
         } else if (_tier == 1) {
-            token.safeTransfer(_clientAddress, _withdrawValue);
-            totalLockedAssets[_tokenAddress] -= _withdrawValue;
+            require(_inDebtValue > 0 || _withdrawValue > 0, "Total withdraw amount is 0");
+            if (_withdrawValue > 0) {
+                token.safeTransfer(_clientAddress, _withdrawValue);
+                totalLockedAssets[_tokenAddress] -= _withdrawValue;
+            }
             if (_inDebtValue > 0) {
                 instantWithdrawReserve[_ticketId][_tokenAddress] += _inDebtValue;
             }

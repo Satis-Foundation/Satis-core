@@ -174,10 +174,10 @@ contract SigmaPoolV2 {
         require(_tier == 1, "Wrong function called for withdraw tier");
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _withdrawDone = sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
+        sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
-        _isDone = _withdrawDone && _eventDone;
+        sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
+        _isDone = true;
     }
 
     /**
@@ -187,10 +187,10 @@ contract SigmaPoolV2 {
         require(_tier == 2, "Wrong function called for withdraw tier");
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _queueDone = sigmaPoolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
+        sigmaPoolContract.verifyAndQueue(_targetSignature, msg.sender, _tokenAddress, _queueValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaQueueWithdraw(_ticketId, msg.sender, _tokenAddress, _queueValue);
-        _isDone = _queueDone && _eventDone;
+        sigmaActionContract.sigmaQueueWithdraw(_ticketId, msg.sender, _tokenAddress, _queueValue);
+        _isDone = true;
     }
 
     /**
@@ -200,10 +200,10 @@ contract SigmaPoolV2 {
         require(_tier == 3, "Wrong function called for withdraw tier");
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _withdrawDone = sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
+        sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
-        _isDone = _withdrawDone && _eventDone;
+        sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
+        _isDone = true;
     }
 
     /**
@@ -212,9 +212,9 @@ contract SigmaPoolV2 {
     function sigmaVerifyAndRedeemToken(bytes memory _targetSignature, address _tokenAddress, uint256 _redeemValue, uint256 _inDebtValue, uint256 _tier, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce, string memory _poolName) external returns(bool _isDone) {
         require(sigmaPoolAddressList[_poolName] != address(0), "No such pool");
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
-        bool _redeemDone = sigmaPoolContract.verifyAndRedeemToken(_targetSignature, msg.sender, _tokenAddress, _redeemValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
+        sigmaPoolContract.verifyAndRedeemToken(_targetSignature, msg.sender, _tokenAddress, _redeemValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaVerifyAndRedeemToken(_ticketId, msg.sender, _tokenAddress, _redeemValue);
-        _isDone = _redeemDone && _eventDone;
+        sigmaActionContract.sigmaVerifyAndRedeemToken(_ticketId, msg.sender, _tokenAddress, _redeemValue);
+        _isDone = true;
     }
 }

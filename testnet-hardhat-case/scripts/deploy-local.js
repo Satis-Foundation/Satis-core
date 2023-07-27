@@ -22,13 +22,13 @@ const { ConsoleLogger } = require("ts-generator/dist/logger");
 
 
 
-async function withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id) {
+async function withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id) {
     
     const signers = await ethers.getSigners();
     const owner = signers[0];
 
     const abiCoder = new ethers.utils.AbiCoder();
-    const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
+    const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), in_debt.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
     const byteMsg = ethers.utils.arrayify(encodeHash);
     const signature = await owner.signMessage(byteMsg);
     
@@ -129,18 +129,21 @@ async function main() {
     var client_address = worker2.address;
     var token_address = token.address;
     var withdraw_final = 200000;
+    var in_debt = 300;
     var tier = 1;
     const chain_id = 31337;
     var pool_address = rawPool.address;
     var exp_block_no = 100000;
-    var ticket_id = "lala-tim";
+    var ticket_id = "test1";
     console.log(`Signing withdraw signature:`)
-    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id);
-    const tier1WithdrawTx = await proxy.connect(worker2).verifyAndWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, "satis-v2");
+    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id);
+    const tier1WithdrawTx = await proxy.connect(worker2).verifyAndWithdrawFund(signature, token_address, withdraw_final, in_debt, tier, exp_block_no, ticket_id, nonce, "satis-v2");
     await tier1WithdrawTx.wait();
     console.log(`Tier 1 withdraw hash: ${tier1WithdrawTx.hash}`);
     var liquidityInPool = await rawPool.totalLockedAssets(token.address);
     console.log(`Liquidity in pool: ${liquidityInPool}`);
+    var inDebt = await rawPool.instantWithdrawReserve(ticket_id, token.address);
+    console.log(`In debt: ${inDebt}`);
     nonce = await rawPool.clientNonce(worker2.address);
     console.log(`Worker 2 updated nonce: ${nonce}`);
     console.log();
@@ -164,9 +167,11 @@ async function main() {
     console.log(`Tier 3 withdraw test:`);
     nonce = await rawPool.clientNonce(worker2.address);
     withdraw_final = 150000;
+    in_debt = 0;
     tier = 3;
-    signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id);
-    const tier3WithdrawTx = await proxy.connect(worker2).verifyAndPartialWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, "satis-v2");
+    ticket_id = "test2";
+    signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id);
+    const tier3WithdrawTx = await proxy.connect(worker2).verifyAndPartialWithdrawFund(signature, token_address, withdraw_final, in_debt, tier, exp_block_no, ticket_id, nonce, "satis-v2");
     await tier3WithdrawTx.wait();
     console.log(`Tier 3 withdraw hash: ${tier3WithdrawTx.hash}`);
     liquidityInPool = await rawPool.totalLockedAssets(token.address);
@@ -175,48 +180,19 @@ async function main() {
     console.log(`Worker 2 updated nonce: ${nonce}`);
     console.log();
 
-    // Tier 1 Bridge debt
-    console.log(`Tier 1 withdraw bridge test:`);
-    nonce = await rawPool.clientNonce(worker2.address);
-    withdraw_final = 2000000;
-    tier = 1;
-    console.log(`Signing withdraw signature:`)
-    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id);
-    const tier1WithdrawBridgeTx = await proxy.connect(worker2).verifyAndWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, "satis-v2");
-    await tier1WithdrawBridgeTx.wait();
-    console.log(`Tier 1 withdraw hash: ${tier1WithdrawBridgeTx.hash}`);
-    var liquidityInPool = await rawPool.totalLockedAssets(token.address);
-    console.log(`Liquidity in pool: ${liquidityInPool}`);
-    nonce = await rawPool.clientNonce(worker2.address);
-    console.log(`Worker 2 updated nonce: ${nonce}`);
     console.log();
-
-    contractOwner = await proxy.connect(worker2).getPoolOwner("satis-v2");
-    console.log(`Owner: ${contractOwner}`);
-    console.log();
-
-    var worker2ReservedValue = await rawPool.instantWithdrawReserve(ticket_id, token.address);
-    console.log(`Worker 2 reserved value (before unlock): ${worker2ReservedValue}`);
-    var workerUnlockTx = await rawPool.connect(worker1).workerUnlockFund([ticket_id], token.address, [10000]);
-    await workerUnlockTx.wait();
-    worker2ReservedValue = await rawPool.instantWithdrawReserve(ticket_id, token.address);
-    console.log(`Worker 2 reserved value (after): ${worker2ReservedValue}`);
-    console.log();
-
-    var batchGet = await rawPool.getInstantWithdrawReserve([ticket_id], token.address);
-    console.log(`Batch get function res: ${batchGet}`);
-
-    console.log(`Basic test done`);
-
     console.log(`Following tier 3 bridging must fail`);
+    console.log();
     // Tier 3 Bridge debt
-    console.log(`Tier 3 withdraw bridge test:`);
+    console.log(`Tier 3 withdraw debt test:`);
     nonce = await rawPool.clientNonce(worker2.address);
-    withdraw_final = 2000000;
+    withdraw_final = 1000;
+    in_debt = 2000;
     tier = 3;
+    ticket_id = "test3";
     console.log(`Signing withdraw signature:`)
-    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id);
-    const tier3WithdrawBridgeTx = await proxy.connect(worker2).verifyAndPartialWithdrawFund(signature, token_address, withdraw_final, tier, exp_block_no, ticket_id, nonce, "satis-v2");
+    var signature = await withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id);
+    const tier3WithdrawBridgeTx = await proxy.connect(worker2).verifyAndPartialWithdrawFund(signature, token_address, withdraw_final, in_debt, tier, exp_block_no, ticket_id, nonce, "satis-v2");
     await tier3WithdrawBridgeTx.wait();
     console.log(`Tier 3 withdraw hash: ${tier3WithdrawBridgeTx.hash}`);
     liquidityInPool = await rawPool.totalLockedAssets(token.address);
