@@ -50,15 +50,15 @@ interface IMoneyPoolRaw {
     /**
      * @dev Verify and withdraw fund.
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external returns(bool _isDone);
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external returns(bool _isDone);
 
     /**
      * @dev Verify and queue.
      */
-    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external returns(bool _isDone);
+    function verifyAndQueue(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external returns(bool _isDone);
 
     /**
      * @dev Verify and redeem SATIS token in Sigma Mining.
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external returns(bool _isDone);
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _inDebtValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external returns(bool _isDone);
 }

@@ -270,6 +270,7 @@ contract MoneyPoolRaw {
       string sender;
       string token;
       string withdraw;
+      string indebt;
       string tier;
       string chainid;
       string pooladdr;
@@ -281,51 +282,48 @@ contract MoneyPoolRaw {
     /**
      * @dev Verify signature, internal function
      */
-    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) internal view returns(bool _isDone) {
+    function verifySignature(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) internal view returns(bool _isDone) {
         require(_chainId == block.chainid, "Incorrect chain ID");
         require(_poolAddress == address(this), "Incorrect pool address");
         require(clientNonce[_clientAddress] == _nonce, "Invalid nonce");
         bytes32 _hashForRecover;
-        address _recoveredAddress;
         Str memory str;
         str.sender = address2str(_clientAddress);
         str.token = address2str(_tokenAddress);
         str.withdraw = uint2str(_withdrawValue);
+        str.indebt = uint2str(_inDebtValue);
         str.tier = uint2str(_tier);
         str.chainid = uint2str(_chainId);
         str.pooladdr = address2str(_poolAddress);
         str.expblockno = uint2str(_expBlockNo);
         str.ticketid = _ticketId;
         str.nonce = uint2str(_nonce);
-        _hashForRecover = hashingMessage(keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.tier, str.chainid, str.pooladdr, str.expblockno, str.ticketid)));
-        _recoveredAddress = recoverSignature(_hashForRecover, _targetSignature);
-        require (_recoveredAddress == owner, "Incorrect signature");
+        _hashForRecover = hashingMessage(keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.indebt, str.tier, str.chainid, str.pooladdr, str.expblockno, str.ticketid)));
+        require (recoverSignature(_hashForRecover, _targetSignature) == owner, "Incorrect signature");
         _isDone = true;
     }
 
     /**
-     * @dev Tier 1 withdrawal
+     * @dev Tier 1 and 3 withdrawal
      */
-    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) public isProxy returns(bool _isDone) {
+    function verifyAndWithdrawFund(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) public isProxy returns(bool _isDone) {
         require (_expBlockNo >= block.number, "Expired signature");
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _tier, _chainId, _poolAddress, _expBlockNo, _ticketId, _nonce);
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _withdrawValue, _inDebtValue, _tier, _chainId, _poolAddress, _expBlockNo, _ticketId, _nonce);
         require (_verification, "Signature verification for instant withdrawal fails");
         clientNonce[_clientAddress] = _nonce + 1;
 
         // Check if native liquidity is enough for tier 3, and queue for tier 1
         IERC20 token = IERC20(_tokenAddress);
+        require(_withdrawValue <= totalLockedAssets[_tokenAddress], "Native withdraw failed");
         if (_tier == 3) {
-            require(_withdrawValue <= totalLockedAssets[_tokenAddress], "Insufficient liquidity for tier 3 withdraw");
+            require(_inDebtValue == 0, "No in-debt value allowed for tier 3 withdraw");
             token.safeTransfer(_clientAddress, _withdrawValue);
             totalLockedAssets[_tokenAddress] -= _withdrawValue;
         } else if (_tier == 1) {
-            if (_withdrawValue > totalLockedAssets[_tokenAddress]) {
-                token.safeTransfer(_clientAddress, totalLockedAssets[_tokenAddress]);
-                instantWithdrawReserve[_ticketId][_tokenAddress] += (_withdrawValue - totalLockedAssets[_tokenAddress]);
-                totalLockedAssets[_tokenAddress] = 0;
-            } else {
-                token.safeTransfer(_clientAddress, _withdrawValue);
-                totalLockedAssets[_tokenAddress] -= _withdrawValue;
+            token.safeTransfer(_clientAddress, _withdrawValue);
+            totalLockedAssets[_tokenAddress] -= _withdrawValue;
+            if (_inDebtValue > 0) {
+                instantWithdrawReserve[_ticketId][_tokenAddress] += _inDebtValue;
             }
         } else {
             revert("Invalid tier");
@@ -337,9 +335,10 @@ contract MoneyPoolRaw {
     /**
      * @dev Verify signature for redeeming SATIS token in Sigma Mining
      */
-    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external isProxy returns(bool _isDone) {
+    function verifyAndRedeemToken(bytes memory _targetSignature, address _clientAddress, address _tokenAddress, uint256 _redeemValue, uint256 _inDebtValue, uint256 _tier, uint256 _chainId, address _poolAddress, uint256 _expBlockNo, string memory _ticketId, uint256 _nonce) external isProxy returns(bool _isDone) {
         require (_expBlockNo >= block.number, "Expired signature");
-        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _tier, _chainId, _poolAddress, _expBlockNo, _ticketId, _nonce);
+        require (_inDebtValue == 0, "No in-debt value allowed for redeeming SATIS token");
+        bool _verification = verifySignature(_targetSignature, _clientAddress, _tokenAddress, _redeemValue, _inDebtValue, _tier, _chainId, _poolAddress, _expBlockNo, _ticketId, _nonce);
         require (_verification == true, "Signature verification fails");
         require (satisTokenBalance[_tokenAddress] >= _redeemValue, "Insifficient SATIS Tokens");
         clientNonce[_clientAddress] = _nonce + 1;
