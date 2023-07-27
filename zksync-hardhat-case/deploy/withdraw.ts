@@ -22,21 +22,19 @@ if (!OWNER_PRIV_KEY || !USER_PRIV_KEY)
   throw "⛔️ Private key not detected! Add it to the .env file!";
 
 // Address of the contract on zksync testnet
-const actionContractAddress = "0x6404133aC57b97CEf521b952b6e69b542DD10A1e";
+const actionContractAddress = "0x40573B24591B8B470675971758c9C6C2C65e47EB";
 const sigmaActionContractAddress = "0xDf78A1ddCAfCc84b5490BAC0AB1846a6B1572419";
-const proxyContractAddress = "0x3c13BDc8eccA8fa43252621230F4574007000975";
+const proxyContractAddress = "0xDc99107e8232766d632D674a743093648dAACa62";
 const sigmaProxyContractAddress = "0xD4dc846f9717b1b481D71F4eaEdB1888972c17e6";
-const rawPoolAddress = "0x4BBFe1F16D6596a0f1Fc2E7fF848AF1BC91ECf98";
+const rawPoolAddress = "0x0A41E531abc8d74E850DFdF750d50bD58a1E3913";
 //const zkc1Address = "0x863e396Ac520bD845af42BA7ad8929f328B3fb61";
 const zkc1Address = "0x0faF6df7054946141266420b43783387A78d82A9";
 
-const tier = 3;
-const chainId = 280;
+//const signature = "0x3e71dcb267011ba231b891e418287920d1d11712d897343e9783caf519ebeb9060730c2a783ff8396ca20fc0c66819771fc4ca26ecb6d91d15cd8fd250c2512c1b";
 const userPubKey = "0xc4adcf8814a1da13522716a23331ce4d48a1414d";
-const signature = "0x27cefb76ee879ee48e72a06ad064fd58043ee4c769b1441da8cb7a586ee8c78573f3b246c93710adb0fb997f95dd186d5c19dc8b76c970e4f5997ee9169d00d81c";
-const withdrawFinal = 31;
-const expBlockNo = 122291;
-const ticketId = "e72e6d37-aa94-4ff3-aa7f-b5bc6c3ebf9d";
+const withdrawFinal = 49534902;
+const tier = 1;
+const chainId = 280;
 
 
 
@@ -115,14 +113,13 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   const withdrawNonce = await proxyContract.getClientNonce(userPubKey, "test");
   console.log(`Withdraw nonce: ${withdrawNonce}`);
 
-  // const signature = await withdrawSignature(withdrawNonce, userPubKey, zkc1Address, withdrawFinal, tier, 280, rawPoolAddress);
+  const signature = await withdrawSignature(withdrawNonce, userPubKey, zkc1Address, withdrawFinal, tier, 280, rawPoolAddress);
 
   const reserveValue = await rawPool.getClientInstantWithdrawReserve([userPubKey],zkc1Address);
   //const reserveValue = await rawPool.instantWithdrawReserve(userPubKey, zkc1Address);
   console.log(`Reserve value: ${reserveValue}`);
 
-  // const withdrawTx = await proxyContract.verifyAndWithdrawFund(signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, withdrawNonce, "test");
-  const withdrawTx = await proxyContract.verifyAndPartialWithdrawFund(signature, zkc1Address, withdrawFinal, tier, expBlockNo, ticketId, withdrawNonce, "satis-v2");
+  const withdrawTx = await proxyContract.verifyAndWithdrawFund(signature, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, withdrawNonce, "test");
   await withdrawTx.wait();
   console.log(`Withdraw queue hash: ${withdrawTx.hash}`);
 

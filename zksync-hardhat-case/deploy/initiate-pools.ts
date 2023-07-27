@@ -39,7 +39,8 @@ if (!actionContractAddress || !sigmaActionContractAddress || !proxyContractAddre
 const poolName = process.env.POOL_NAME || "";
 const addAmountStr = process.env.ADD_AMT || "";
 
-const withdrawFinal = 1; // Just to queue and allow quote api to estimate without extra TX
+const withdrawFinal = 0;
+const in_debt = 1; // Just to queue and allow quote api to estimate without extra TX
 const expBlockNo = 9999999999; // Just large enough so not expired
 const worker1PubKey = process.env.WORKER1_PUB_KEY || "";
 const worker2PubKey = process.env.WORKER2_PUB_KEY || "";
@@ -69,12 +70,12 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Running script......`);
 
 
-  async function withdrawSignature(nonce, client_address, token_address, withdraw_final, tier, chain_id, pool_address, exp_block_no, ticket_id) {
+  async function withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id) {
 
     const owner = new ethers.Wallet(OWNER_PRIV_KEY, provider);
   
     const abiCoder = new ethers.utils.AbiCoder();
-    const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
+    const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), in_debt.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
     const byteMsg = ethers.utils.arrayify(encodeHash);
     const signature = await owner.signMessage(byteMsg);
     
@@ -127,14 +128,14 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 
   var worker1TicketId = "worker1-test";
   var worker2TicketId = "worker2-test";
-  const worker1Signature = await withdrawSignature(worker1WithdrawNonce, worker1PubKey, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, expBlockNo, worker1TicketId);
-  const worker2Signature = await withdrawSignature(worker2WithdrawNonce, worker2PubKey, zkc1Address, withdrawFinal, tier, chainId, rawPoolAddress, expBlockNo, worker2TicketId);
+  const worker1Signature = await withdrawSignature(worker1WithdrawNonce, worker1PubKey, zkc1Address, withdrawFinal, in_debt, tier, chainId, rawPoolAddress, expBlockNo, worker1TicketId);
+  const worker2Signature = await withdrawSignature(worker2WithdrawNonce, worker2PubKey, zkc1Address, withdrawFinal, in_debt, tier, chainId, rawPoolAddress, expBlockNo, worker2TicketId);
 
 
-  const worker1WithdrawTx = await proxyContract.connect(worker1).verifyAndWithdrawFund(worker1Signature, zkc1Address, withdrawFinal, tier, expBlockNo, worker1TicketId, worker1WithdrawNonce, poolName);
+  const worker1WithdrawTx = await proxyContract.connect(worker1).verifyAndWithdrawFund(worker1Signature, zkc1Address, withdrawFinal, in_debt, tier, expBlockNo, worker1TicketId, worker1WithdrawNonce, poolName);
   await worker1WithdrawTx.wait();
   console.log(`Worker 1 withdraw queue hash: ${worker1WithdrawTx.hash}`);
-  const worker2WithdrawTx = await proxyContract.connect(worker2).verifyAndWithdrawFund(worker2Signature, zkc1Address, withdrawFinal, tier, expBlockNo, worker2TicketId, worker2WithdrawNonce, poolName);
+  const worker2WithdrawTx = await proxyContract.connect(worker2).verifyAndWithdrawFund(worker2Signature, zkc1Address, withdrawFinal, in_debt, tier, expBlockNo, worker2TicketId, worker2WithdrawNonce, poolName);
   await worker2WithdrawTx.wait();
   console.log(`Worker 2 withdraw queue hash: ${worker2WithdrawTx.hash}`);
 
