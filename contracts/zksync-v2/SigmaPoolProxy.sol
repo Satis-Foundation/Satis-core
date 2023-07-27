@@ -176,7 +176,7 @@ contract SigmaPoolV2 {
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
         bool _withdrawDone = sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaQueueWithdraw(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
+        bool _eventDone = sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
         _isDone = _withdrawDone && _eventDone;
     }
 
@@ -202,7 +202,7 @@ contract SigmaPoolV2 {
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
         bool _withdrawDone = sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        bool _eventDone = sigmaActionContract.sigmaQueueWithdraw(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
+        bool _eventDone = sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
         _isDone = _withdrawDone && _eventDone;
     }
 
