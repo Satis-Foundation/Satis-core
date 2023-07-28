@@ -1,0 +1,14 @@
+{
+    "chain_id": 280,
+    "client_address": "0xc4adcf8814a1da13522716a23331ce4d48a1414d",
+    "in_debt": 0,
+    "nonce": 1,
+    "pool_address": "0xE821d4D804B1Cfd3211e01e3cf5115c3B7cD9335",
+    "pool_name": "satis-v2",
+    "ticket_id": "d39cd766-a7c3-47bd-b9af-b63322b8a37a",
+    "tier": 3,
+    "timeout_block_no": 122524,
+    "token_address": "0x0faF6df7054946141266420b43783387A78d82A9",
+    "withdrawal_final": 18,
+    "withdrawal_hash": "0x1466c86ec186d4fa4e2ead341e45eba827b48fb47eae4bb9ac14ee8580bc14220e87835f659930ac7c497196829869c270e110360ece965e371e3949713c12ed1b"
+}
