@@ -90,7 +90,12 @@
         },
         {
           "internalType": "uint256",
-          "name": "_tokenValue",
+          "name": "_withdrawValue",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_inDebtValue",
           "type": "uint256"
         }
       ],
