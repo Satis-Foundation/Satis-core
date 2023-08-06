@@ -176,7 +176,7 @@ contract SigmaPoolV2 {
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
         sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
+        sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue);
         _isDone = true;
     }
 
@@ -202,7 +202,7 @@ contract SigmaPoolV2 {
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
         sigmaPoolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
+        sigmaActionContract.sigmaWithdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue);
         _isDone = true;
     }
 

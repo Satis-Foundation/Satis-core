@@ -175,7 +175,7 @@ contract MoneyPoolV2 {
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         IAction actionContract = IAction(actionContractAddress);
-        actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue);
+        actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _withdrawValue, _inDebtValue);
         _isDone = true;
     }
 
@@ -201,7 +201,7 @@ contract MoneyPoolV2 {
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         poolContract.verifyAndWithdrawFund(_targetSignature, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue, _tier, block.chainid, poolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         IAction actionContract = IAction(actionContractAddress);
-        actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue);
+        actionContract.withdrawFund(_ticketId, msg.sender, _tokenAddress, _partialWithdrawValue, _inDebtValue);
         _isDone = true;
     }
 }

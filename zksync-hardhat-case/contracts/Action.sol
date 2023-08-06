@@ -14,7 +14,7 @@ contract Action {
 
     event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
     event Queue(string ticketId, address clientAddress, address tokenAddress, uint queueValue);
-    event Withdraw(string ticketId, address clientAddress, address tokenAddress, uint withdrawValue);
+    event Withdraw(string ticketId, address clientAddress, address tokenAddress, uint withdrawValue, uint inDebtValue);
     event ChangeOwnership(address newOwner);
     event ChangeProxy(address newProxy);
 
@@ -67,8 +67,8 @@ contract Action {
     /**
      * @dev Emit remove fund event on chain
      */
-    function withdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit Withdraw(_ticketId, _clientAddress, _tokenAddress, _tokenValue);
+    function withdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue) public isProxy returns(bool _isDone) {
+        emit Withdraw(_ticketId, _clientAddress, _tokenAddress, _withdrawValue, _inDebtValue);
         _isDone = true;
     }
 

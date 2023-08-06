@@ -14,6 +14,7 @@ import * as rawPoolArtifact from "../artifacts-zk/contracts/MoneyPoolRaw.sol/Mon
 import * as proxyArtifact from "../artifacts-zk/contracts/MoneyPoolProxy.sol/MoneyPoolV2.json";
 import * as sigmaProxyArtifact from "../artifacts-zk/contracts/SigmaPoolProxy.sol/SigmaPoolV2.json";
 import * as zkc1Artifact from "../artifacts-zk/contracts/C5.sol/TestTokenCZK.json";
+import { Deployer } from "@matterlabs/hardhat-zksync-deploy";
 
 const OWNER_PRIV_KEY = process.env.OWNER_PRIV_KEY || "";
 const WORKER1_PRIV_KEY = process.env.WORKER1_PRIV_KEY || "";
@@ -67,17 +68,18 @@ const chainId = Number(chainIdStr);
 
 // An example of a deploy script that will deploy and call a simple contract.
 export default async function (hre: HardhatRuntimeEnvironment) {
-  console.log(`Running script......`);
+  console.log(`Running script for SATIS Pools initiation......`);
 
 
   async function withdrawSignature(nonce, client_address, token_address, withdraw_final, in_debt, tier, chain_id, pool_address, exp_block_no, ticket_id) {
 
     const owner = new ethers.Wallet(OWNER_PRIV_KEY, provider);
+    const worker2 = new ethers.Wallet(WORKER2_PRIV_KEY, provider);
   
     const abiCoder = new ethers.utils.AbiCoder();
     const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), in_debt.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
     const byteMsg = ethers.utils.arrayify(encodeHash);
-    const signature = await owner.signMessage(byteMsg);
+    const signature = await worker2.signMessage(byteMsg);
     
     console.log(`Signature: ${signature}`);
     return signature;
@@ -88,6 +90,7 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   // @ts-ignore
   const provider = new Provider(hre.userConfig.networks?.zkSyncTestnet?.url);
   //const signer = new ethers.Wallet(PRIVATE_KEY, provider);
+  const owner = new ethers.Wallet(OWNER_PRIV_KEY, provider);
   const worker1 = new ethers.Wallet(WORKER1_PRIV_KEY, provider);
   const worker2 = new ethers.Wallet(WORKER2_PRIV_KEY, provider);
 
@@ -120,6 +123,16 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 
 
 
+  // Test withdraw
+  // const ownerWithdrawNonce = await proxyContract.connect(owner).getClientNonce(owner.address, poolName);
+  // console.log(`Withdraw nonce for owner: ${ownerWithdrawNonce}`);
+  // console.log(`Owner address: ${owner.address}`);
+  // const ownerSignature = await withdrawSignature(0, owner.address, zkc1Address, 19, 0, 3, 280, "0xE821d4D804B1Cfd3211e01e3cf5115c3B7cD9335", 122481, "a937cbb3-d85e-46d8-8af6-b11ffe45b1c8");
+  // console.log(`Owner signature: ${ownerSignature}`);
+  // const ownerWithdrawTx = await proxyContract.connect(owner).verifyAndPartialWithdrawFund(ownerSignature, zkc1Address, 19, 0, 3, expBlockNo, "a937cbb3-d85e-46d8-8af6-b11ffe45b1c8", ownerWithdrawNonce, poolName);
+  // await ownerWithdrawTx.wait();
+  // console.log(`Owner withdraw queue hash: ${ownerWithdrawTx.hash}`);
+
   // Queue withdraw for workers --> can do estimation all the time without extra TX
   const worker1WithdrawNonce = await proxyContract.connect(worker1).getClientNonce(worker1PubKey, poolName);
   console.log(`Withdraw nonce for worker 1: ${worker1WithdrawNonce}`);
@@ -143,11 +156,11 @@ export default async function (hre: HardhatRuntimeEnvironment) {
   //const reserveValue = await rawPool.instantWithdrawReserve(userPubKey, zkc1Address);
   console.log(`Reserved value for [worker1, worker2]: ${reserveValue}`);
 
-  // Add fund
+  // Add fund for 5 USDC
   const approveTx = await zkc1.connect(worker1).approve(rawPoolAddress, addAmount);
   await approveTx.wait();
   const addTx = await proxyContract.connect(worker1).addFundWithAction(zkc1Address, addAmount, "meow", poolName);
   await addTx.wait();
   console.log(`Add hash: ${addTx.hash}`);
-  console.log(`${addAmount/1e6} is added through proxy to ${rawPoolAddress}`);
+  console.log(`${addAmount/1e6} USDC is added through proxy to ${rawPoolAddress}`);
 }

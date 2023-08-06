@@ -17,5 +17,5 @@ interface IAction {
     /**
      * @dev Emit withdraw event
      */
-    function withdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) external returns(bool);
+    function withdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue) external returns(bool);
 }

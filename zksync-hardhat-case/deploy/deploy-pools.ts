@@ -31,14 +31,15 @@ export default async function (hre: HardhatRuntimeEnvironment) {
 
   // Pubkey as dummy address
   const dummyAddress = "0xc4adcF8814a1da13522716A23331Ce4d48A1414d";
+  const signatureWorkerAddress = "0x4672b8068596652B017dF743426314E691624E32";
   var deployGasCount = 0;
 
   // Deploy Raw Pool
-  const deploymentFeeRawPool = await deployer.estimateDeployFee(rawPoolArtifact, [dummyAddress, dummyAddress]);
+  const deploymentFeeRawPool = await deployer.estimateDeployFee(rawPoolArtifact, [dummyAddress, dummyAddress, signatureWorkerAddress]);
   var parsedFee = ethers.utils.formatEther(deploymentFeeRawPool.toString());
   console.log(`Estimated deployment fee for Raw Pool: ${parsedFee} ETH`);
   deployGasCount += Number(parsedFee);
-  const rawPool = await deployer.deploy(rawPoolArtifact, [dummyAddress, dummyAddress]);
+  const rawPool = await deployer.deploy(rawPoolArtifact, [dummyAddress, dummyAddress, signatureWorkerAddress]);
   const rawPoolAddress = rawPool.address;
   console.log(`${rawPoolArtifact.contractName} was deployed to ${rawPoolAddress}`);
   console.log();

@@ -28,6 +28,7 @@ contract MoneyPoolRaw {
     mapping (address => bool) public workerList;
 
     address public owner;
+    address public signatureWorker;
     address public proxy;
     address public sigmaProxy;
 
@@ -37,8 +38,8 @@ contract MoneyPoolRaw {
     event OwnerTakeProfit(address tokenAddress, uint256 takeProfitValue);
 
     event ChangeOwnership(address newOwner);
-    event AddWorkers(address[] addWorkerList);
-    event RemoveWorkers(address[] removeWorkerList);
+    event AddRemoveWorkers(address[] modifyAddrList, uint8 isAdd);
+    event ChangeSignatureWorker(address newSignatureWorker);
     event ChangeProxy(address newProxy);
     event ChangeSigmaProxy(address newSigmaProxy);
 
@@ -75,11 +76,11 @@ contract MoneyPoolRaw {
     /**
      * @dev Sets the value for {owner}, owner is also a worker.
      */
-    constructor(address _initialProxyAddress, address _initialSigmaProxyAddress) {
+    constructor(address _initialProxyAddress, address _initialSigmaProxyAddress, address _signatureWorker) {
         require(_initialProxyAddress != address(0), "Zero address for proxy");
         require(_initialSigmaProxyAddress != address(0), "Zero address for sigma proxy");
         owner = msg.sender;
-        workerList[owner] = true;
+        signatureWorker = _signatureWorker;
         proxy = _initialProxyAddress;
         sigmaProxy = _initialSigmaProxyAddress;
     }
@@ -100,10 +101,17 @@ contract MoneyPoolRaw {
      */
     function transferOwnership(address _newOwner) public isOwner {
         require(_newOwner != address(0), "Zero address for new owner");
-        workerList[owner] = false;
         owner = _newOwner;
-        workerList[owner] = true;
         emit ChangeOwnership(_newOwner);
+    }
+
+    /**
+     * @dev Change to new signature worker.
+     */
+    function changeSignatureWorker(address _newSignatureWorker) public isOwner {
+        require(_newSignatureWorker != address(0), "Zero address for new signature worker");
+        signatureWorker = _newSignatureWorker;
+        emit ChangeSignatureWorker(_newSignatureWorker);
     }
 
     /**
@@ -113,7 +121,7 @@ contract MoneyPoolRaw {
         for(uint256 i=0; i < _addWorkerList.length; i++) {
             workerList[_addWorkerList[i]] = true;
         }
-        emit AddWorkers(_addWorkerList);
+        emit AddRemoveWorkers(_addWorkerList, 1);
     }
 
     /**
@@ -123,13 +131,13 @@ contract MoneyPoolRaw {
         for(uint256 i=0; i < _removeWorkerList.length; i++) {
             workerList[_removeWorkerList[i]] = false;
         }
-        emit RemoveWorkers(_removeWorkerList);
+        emit AddRemoveWorkers(_removeWorkerList, 0);
     }
 
     /**
      * @dev Update proxy contract address.
      */
-    function updateProxyAddress(address _newProxyAddress) public isWorker {
+    function updateProxyAddress(address _newProxyAddress) public isOwner {
         require(_newProxyAddress != address(0), "Zero address for new proxy");
         proxy = _newProxyAddress;
         emit ChangeProxy(_newProxyAddress);
@@ -138,7 +146,7 @@ contract MoneyPoolRaw {
     /**
      * @dev Update sigma mining proxy contract address.
      */
-    function updateSigmaProxyAddress(address _newSigmaProxyAddress) public isWorker {
+    function updateSigmaProxyAddress(address _newSigmaProxyAddress) public isOwner {
         require(_newSigmaProxyAddress != address(0), "Zero address for new sigma proxy");
         sigmaProxy = _newSigmaProxyAddress;
         emit ChangeSigmaProxy(_newSigmaProxyAddress);
@@ -299,7 +307,7 @@ contract MoneyPoolRaw {
         str.ticketid = _ticketId;
         str.nonce = uint2str(_nonce);
         _hashForRecover = hashingMessage(keccak256(abi.encode(str.nonce, str.sender, str.token, str.withdraw, str.indebt, str.tier, str.chainid, str.pooladdr, str.expblockno, str.ticketid)));
-        require (recoverSignature(_hashForRecover, _targetSignature) == owner, "Incorrect signature");
+        require (recoverSignature(_hashForRecover, _targetSignature) == signatureWorker, "Incorrect signature");
         _isDone = true;
     }
 

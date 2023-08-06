@@ -14,7 +14,7 @@ contract SigmaAction {
 
     event TransferIn(address clientAddress, address tokenAddress, uint transactionValue, string data);
     event Queue(string ticketId, address clientAddress, address tokenAddress, uint queueValue);
-    event Withdraw(string ticketId, address clientAddress, address tokenAddress, uint withdrawValue);
+    event Withdraw(string ticketId, address clientAddress, address tokenAddress, uint withdrawValue, uint inDebtValue);
     event RedeemToken(string ticketId, address clientAddress, address tokenAddress, uint transactionValue);
     event ChangeOwnership(address newOwner);
     event ChangeSigmaProxy(address newSigmaProxy);
@@ -73,8 +73,8 @@ contract SigmaAction {
     /**
      * @dev Emit withdraw event on chain
      */
-    function sigmaWithdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _tokenValue) public isProxy returns(bool _isDone) {
-        emit Withdraw(_ticketId, _clientAddress, _tokenAddress, _tokenValue);
+    function sigmaWithdrawFund(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _withdrawValue, uint256 _inDebtValue) public isProxy returns(bool _isDone) {
+        emit Withdraw(_ticketId, _clientAddress, _tokenAddress, _withdrawValue, _inDebtValue);
         _isDone = true;
     }
 

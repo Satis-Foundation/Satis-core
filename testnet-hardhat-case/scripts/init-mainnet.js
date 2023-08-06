@@ -21,9 +21,9 @@ const { ConsoleLogger } = require("ts-generator/dist/logger");
 
 
 const usdcAddress = "0xd35CCeEAD182dcee0F148EbaC9447DA2c4D449c4";
-const proxyAddr = "0x26A2a41ffCb29feBC8853C93E4c2B0f24697965D";
-const rawPoolAddr = "0xbaea128EAb2b23A0eB178C2443e1dd8a199190d4";
-const multiSigAddr = "0x2a701bcD19eFec9D4Fb334Bd256BF228Da7e4808";
+const proxyAddr = "0x6F32cBf41d559eA38FD93fDB83A9905972CddfCf";
+const rawPoolAddr = "0x7D6c8Fee5639111A9bfd4935e60b50A56B1d78b4";
+const multiSigAddr = "0x1Fc4F8fAf9702b4a931C9f7459194237dB06a898";
 
 
 
@@ -61,11 +61,11 @@ async function main() {
         });
     const rawPool = await rawPoolInstance.attach(rawPoolAddr);
 
-    // Add fund
-    var approveTx = await token.connect(worker1).approve(rawPool.address, "100000000");
+    // Add fund for 2000 USDC
+    var approveTx = await token.connect(worker1).approve(rawPool.address, "2000000000");
     await approveTx.wait();
     console.log(`Approve hash: ${approveTx.hash}`);
-    var addFundTx = await proxy.connect(worker1).addFundWithAction(token.address, "100000000", "meow", "satis-v2");
+    var addFundTx = await proxy.connect(worker1).addFundWithAction(token.address, "2000000000", "meow", "satis-v2");
     await addFundTx.wait();
     console.log(`Add fund hash: ${addFundTx.hash}`);
     console.log();

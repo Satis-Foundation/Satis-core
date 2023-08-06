@@ -27,11 +27,12 @@ async function withdrawSignature(nonce, client_address, token_address, withdraw_
 
     const signers = await ethers.getSigners();
     const owner = signers[0];
+    const worker2 = signers[2];
 
     const abiCoder = new ethers.utils.AbiCoder();
     const encodeHash = keccak256(abiCoder.encode([ "string", "string", "string", "string", "string", "string", "string", "string", "string", "string" ], [ nonce.toString(), client_address.toLowerCase(), token_address.toLowerCase(), withdraw_final.toString(), in_debt.toString(), tier.toString(), chain_id.toString(), pool_address.toLowerCase(), exp_block_no.toString(), ticket_id.toLowerCase() ]));
     const byteMsg = ethers.utils.arrayify(encodeHash);
-    const signature = await owner.signMessage(byteMsg);
+    const signature = await worker2.signMessage(byteMsg);
     
     console.log(`Signature: ${signature}`);
     return signature;
@@ -90,7 +91,7 @@ async function main() {
             MultiSig: multiSig.address,
         },
     }, deployer);
-    const rawPool = await rawPoolInstance.deploy(deployer.address, deployer.address);
+    const rawPool = await rawPoolInstance.deploy(deployer.address, deployer.address, worker2.address);
     await rawPool.deployed();
     console.log(`Money Pool Raw deployed at ${rawPool.address}`);
     console.log();
@@ -153,6 +154,10 @@ async function main() {
     // await addFundTx.wait();
     // console.log(`Add fund hash: ${addFundTx.hash}`);
     // console.log();
+
+    // Get signature worker address
+    const sigWorkerAddr = await rawPool.connect(worker1).signatureWorker();
+    console.log(`Signature worker address: ${sigWorkerAddr}`);
 
     // Withdraw estimation setup (worker 1)
     console.log(`Withdraw estimation setup (worker 1):`);
