@@ -1,0 +1,47 @@
+stages:
+  - test-evm
+  - test-zk
+
+
+
+test-with-hardhat:
+  stage: test-evm
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+  image: docker:latest
+  before_script:
+    - apk add git nodejs yarn npm
+  script:
+    - cp -r contracts/v2 ci-hardhat-case
+    - cd ci-hardhat-case
+    - mv v2 contracts
+    - yarn add hardhat
+    - yarn install
+    - npx hardhat compile
+    - cd ../..
+
+test-with-zksync:
+  stage: test-zk
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+  image: docker:latest
+  before_script:
+    - apk add git nodejs yarn npm
+  script:
+    - node -v
+    - cp -r contracts/zksync_v2 ci-zksync-case
+    - cp -r contracts/v2/lib_and_interface ci-zksync-case
+    - cd ci-zksync-case
+    - mkdir contracts
+    - mv zksync_v2 contracts
+    - mv lib_and_interface contracts
+    - yarn install
+    - yarn add zksync-cli@latest
+    - yarn hardhat compile
+    - cd ../..

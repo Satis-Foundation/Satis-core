@@ -1,17 +1,14 @@
-/**
- * @type import('hardhat/config').HardhatUserConfig
- */
-
-require('hardhat-typechain');
+/** @type import('hardhat/config').HardhatUserConfig */
+require("@nomiclabs/hardhat-waffle");
 require('@nomiclabs/hardhat-ethers');
-require('@nomiclabs/hardhat-waffle');
+require('@typechain/hardhat');
 require('@nomiclabs/hardhat-etherscan');
 
 module.exports = {
   solidity: {
     compilers: [
       {
-        version: "0.8.2",
+        version: "0.8.20",
         settings: {
           optimizer: {
             enabled: true,
@@ -21,9 +18,6 @@ module.exports = {
             bytecodeHash: 'none',
           },
         },
-      },
-      {
-        version: "0.4.24",
       },
     ],
   },
