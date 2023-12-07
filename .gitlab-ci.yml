@@ -34,6 +34,7 @@ test-with-zksync:
   before_script:
     - apk add git nodejs yarn npm
   script:
+    - node -v
     - cp -r contracts/zksync_v2 ci-zksync-case
     - cd ci-zksync-case
     - mv zksync_v2 contracts
