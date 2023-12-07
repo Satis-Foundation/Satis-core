@@ -39,7 +39,7 @@ test-with-zksync:
     - cd ci-zksync-case
     - mv zksync_v2 contracts
     - yarn install
-    - yarn add typescript ts-node hardhat-typechain
+    - yarn add typescript ts-node
     - yarn add zksync-cli@latest
     - yarn hardhat compile
     - cd ../..
