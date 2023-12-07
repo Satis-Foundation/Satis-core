@@ -18,7 +18,7 @@ test-with-hardhat:
     - cp -r contracts/v2 ci-hardhat-case
     - cd ci-hardhat-case
     - mv v2 contracts
-    - yarn add typescript ts-node
+    - yarn add typescript ts-node hardhat-typechain
     - yarn add hardhat
     - yarn install
     - npx hardhat compile
@@ -39,7 +39,7 @@ test-with-zksync:
     - cd ci-zksync-case
     - mv zksync_v2 contracts
     - yarn install
-    - yarn add typescript ts-node
+    - yarn add typescript ts-node hardhat-typechain
     - yarn add zksync-cli@latest
     - yarn hardhat compile
     - cd ../..
