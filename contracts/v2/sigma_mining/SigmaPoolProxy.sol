@@ -214,7 +214,7 @@ contract SigmaPoolV2 {
         IMoneyPoolRaw sigmaPoolContract = IMoneyPoolRaw(sigmaPoolAddressList[_poolName]);
         sigmaPoolContract.verifyAndRedeemToken(_targetSignature, msg.sender, _tokenAddress, _redeemValue, _inDebtValue, _tier, block.chainid, sigmaPoolAddressList[_poolName], _expBlockNo, _ticketId, _nonce);
         ISigmaAction sigmaActionContract = ISigmaAction(sigmaActionContractAddress);
-        sigmaActionContract.sigmaVerifyAndRedeemToken(msg.sender, _tokenAddress, _redeemValue);
+        sigmaActionContract.sigmaVerifyAndRedeemToken(_ticketId, msg.sender, _tokenAddress, _redeemValue);
         _isDone = true;
     }
 }

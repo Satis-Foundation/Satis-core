@@ -22,5 +22,5 @@ interface ISigmaAction {
     /**
      * @dev Emit redeem fund event
      */
-    function sigmaVerifyAndRedeemToken(address _clientAddress, address _tokenAddress, uint256 _redeemValue) external returns(bool);
+    function sigmaVerifyAndRedeemToken(string memory _ticketId, address _clientAddress, address _tokenAddress, uint256 _redeemValue) external returns(bool);
 }
