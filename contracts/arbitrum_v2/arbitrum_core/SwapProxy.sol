@@ -66,7 +66,7 @@ contract SwapProxy {
         }
     }
 
-    function swap(address _clientAddress, address _tokenIn, address _tokenOut, uint256 _tokenInAmount, uint24 _routerCode, uint24 _poolFee, uint256 _minAmountSwap, uint160 _sqrtPriceLimitX96) external isProxy returns(uint256) {
+    function swap(address _clientAddress, address _tokenIn, address _tokenOut, uint256 _tokenInAmount, uint24 _poolFee, uint256 _minAmountSwap, uint160 _sqrtPriceLimitX96) external isProxy returns(uint256) {
         require(enabledCurrency[_tokenIn] == true, "TokenIn is not valid currency");
         require(_tokenIn != _tokenOut, "TokenIn == TokenOut");
         require(_tokenInAmount > 0, "0 swap amount");

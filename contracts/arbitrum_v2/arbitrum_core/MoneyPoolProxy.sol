@@ -224,11 +224,11 @@ contract MoneyPoolV2 {
     /**
      * @dev Swap fund then add fund
      */
-    function swapFundWithAction(address _tokenIn, address _tokenSwap, uint256 _tokenInAmount, uint24 _routerCode, uint24 _poolFee, uint256 _minAmountSwap, uint160 _sqrtPriceLimitX96, string memory _data, string memory _poolName) external returns(bool _isDone) {
+    function swapFundWithAction(address _tokenIn, address _tokenSwap, uint256 _tokenInAmount, uint24 _poolFee, uint256 _minAmountSwap, uint160 _sqrtPriceLimitX96, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
-        require( enabledCurrency[_tokenSwap] == true, "Currency not supported");
+        require(enabledCurrency[_tokenSwap] == true, "Currency not supported");
         ISwapProxy swapProxy = ISwapProxy(swapProxyAddress);
-        uint256 _tokenOutAmount = swapProxy.swap(msg.sender, _tokenIn, _tokenSwap, _tokenInAmount, _routerCode, _poolFee, _minAmountSwap, _sqrtPriceLimitX96);
+        uint256 _tokenOutAmount = swapProxy.swap(msg.sender, _tokenIn, _tokenSwap, _tokenInAmount, _poolFee, _minAmountSwap, _sqrtPriceLimitX96);
         // address(this) wil be swap receiver, send token to raw pool
         IERC20 tokenSwap = IERC20(_tokenSwap);
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
