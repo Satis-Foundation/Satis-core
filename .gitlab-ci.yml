@@ -36,7 +36,7 @@ test-with-zksync:
     - cp -r contracts/zksync_v2 ci-zksync-case
     - cd ci-zksync-case
     - mv zksync_v2 contracts
-    - mv lib_and_interface contracts
+    - cp -r ../contracts/v2/lib_and_interface contracts
     - yarn install
     - yarn add zksync-cli@latest
     - yarn hardhat compile
