@@ -216,8 +216,7 @@ contract MoneyPoolV2 {
         } else {
             _addDone = true;
         }
-        IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.addFundWithAction(msg.sender, _tokenAddress, _tokenValue, _data);
+        bool _eventDone = addFundEvent(msg.sender, _tokenAddress, _tokenValue, _data);
         _isDone = _addDone && _eventDone;
     }
 
@@ -234,9 +233,16 @@ contract MoneyPoolV2 {
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
         tokenSwap.safeTransfer(poolAddressList[_poolName], _tokenOutAmount);
         bool _addDone = poolContract.addFundWithAction(msg.sender, _tokenSwap, _tokenOutAmount, true);
-        IAction actionContract = IAction(actionContractAddress);
-        bool _eventDone = actionContract.addFundWithAction(msg.sender, _tokenSwap, _tokenOutAmount, _data);
+        bool _eventDone = addFundEvent(msg.sender, _tokenSwap, _tokenInAmount, _data);
         _isDone = _addDone && _eventDone;
+    }
+
+    /**
+     * Internal function for add fund event, prevent stack too deep.
+     */
+    function addFundEvent(address _clientAddress, address _tokenAddress, uint256 _tokenValue, string memory _data) internal returns(bool _isDone) {
+        IAction actionContract = IAction(actionContractAddress);
+        _isDone = actionContract.addFundWithAction(_clientAddress, _tokenAddress, _tokenValue, _data);
     }
 
     /**
