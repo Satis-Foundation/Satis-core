@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../lib_and_interface/IMoneyPoolRaw.sol";
 import "../lib_and_interface/IAction.sol";
-import "../lib_and_interface/ISwapRouter.sol";
+import "../lib_and_interface/ISwapProxy.sol";
 import "../lib_and_interface/Address.sol";
 import "../lib_and_interface/IERC20.sol";
 import "../lib_and_interface/SafeERC20.sol";
@@ -28,7 +28,7 @@ contract MoneyPoolV2 {
 
     address public owner;
     address public actionContractAddress;
-    address public swapRouterAddress;
+    address public swapProxyAddress;
     mapping (address => bool) public enabledCurrency;
     mapping (string => address) public poolAddressList;
     mapping (address => bool) public swapControllerList;
@@ -63,7 +63,7 @@ contract MoneyPoolV2 {
     /**
      * @dev Sets the value for {owner}, {workerList} and {poolList}
      */
-    constructor(address[] memory _currencyList, string[] memory _poolNameList, address[] memory _poolAddressList, address _actionContractAddress, address _swapRouterAddress) {
+    constructor(address[] memory _currencyList, string[] memory _poolNameList, address[] memory _poolAddressList, address _actionContractAddress, address _swapProxyAddress) {
         require(_currencyList.length > 0, "Enable at least one currency");
         require(_actionContractAddress != address(0), "Zero address for action contract");
         require(_poolNameList.length == _poolAddressList.length, "Lists' length is different");
@@ -73,7 +73,7 @@ contract MoneyPoolV2 {
             poolAddressList[_poolNameList[i]] = _poolAddressList[i];
         }
         actionContractAddress = _actionContractAddress;
-        swapRouterAddress = _swapRouterAddress;
+        swapProxyAddress = _swapProxyAddress;
         for(uint256 i=0; i < _currencyList.length; i++) {
             enabledCurrency[_currencyList[i]] = true;
         }
@@ -179,9 +179,9 @@ contract MoneyPoolV2 {
     /**
      * @dev Change swap router address.
      */
-    function changeSwapRouter(address _newSwapRouterAddress) external isWorker {
-        require(_newSwapRouterAddress != address(0), "Zero address for new swap router");
-        swapRouterAddress = _newSwapRouterAddress;
+    function changeSwapProxy(address _newSwapProxyAddress) external isWorker {
+        require(_newSwapProxyAddress != address(0), "Zero address for new swap router");
+        swapProxyAddress = _newSwapProxyAddress;
     }
 
     /**
@@ -227,8 +227,8 @@ contract MoneyPoolV2 {
     function swapFundWithAction(address _tokenIn, address _tokenSwap, uint256 _tokenInAmount, uint24 _routerCode, uint24 _poolFee, uint256 _minAmountSwap, uint160 _sqrtPriceLimitX96, string memory _data, string memory _poolName) external returns(bool _isDone) {
         require(poolAddressList[_poolName] != address(0), "No such pool");
         require( enabledCurrency[_tokenSwap] == true, "Currency not supported");
-        ISwapRouter swapRouter = ISwapRouter(swapRouterAddress);
-        uint256 _tokenOutAmount = swapRouter.swap(_tokenIn, _tokenSwap, _tokenInAmount, _routerCode, _poolFee, _minAmountSwap, _sqrtPriceLimitX96);
+        ISwapProxy swapProxy = ISwapProxy(swapProxyAddress);
+        uint256 _tokenOutAmount = swapProxy.swap(msg.sender, _tokenIn, _tokenSwap, _tokenInAmount, _routerCode, _poolFee, _minAmountSwap, _sqrtPriceLimitX96);
         // address(this) wil be swap receiver, send token to raw pool
         IERC20 tokenSwap = IERC20(_tokenSwap);
         IMoneyPoolRaw poolContract = IMoneyPoolRaw(poolAddressList[_poolName]);
