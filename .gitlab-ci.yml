@@ -17,8 +17,8 @@ test-with-hardhat:
     - cp -r contracts/v2 ci-hardhat-case
     - cd ci-hardhat-case
     - mv v2 contracts
-    - yarn add hardhat
     - yarn install
+    - yarn add hardhat
     - npx hardhat compile
     - cd ../..
 
@@ -56,7 +56,7 @@ test-with-arbitrum:
     - cp -r contracts/arbitrum_v2 ci-hardhat-case
     - cd ci-hardhat-case
     - mv arbitrum_v2 contracts
-    - yarn add hardhat
     - yarn install
+    - yarn add hardhat
     - npx hardhat compile
     - cd ../..

@@ -66,17 +66,28 @@ contract SwapProxy {
         }
     }
 
-    function swap(address _clientAddress, address _tokenIn, address _tokenOut, uint256 _tokenInAmount, uint24 _poolFee, uint256 _minAmountSwap, uint160 _sqrtPriceLimitX96) external isProxy returns(uint256) {
+    function swap(address _clientAddress, address _tokenIn, address _tokenOut, uint256 _tokenInAmount, uint24 _poolFee, uint256 _minAmountSwap, uint160 _sqrtPriceLimitX96, bool _isExactIn) external isProxy returns(uint256) {
         require(enabledCurrency[_tokenIn] == true, "TokenIn is not valid currency");
         require(_tokenIn != _tokenOut, "TokenIn == TokenOut");
         require(_tokenInAmount > 0, "0 swap amount");
 
         TransferHelper.safeTransferFrom(_tokenIn, _clientAddress, address(this), _tokenInAmount);
-
-        //uint256 _tokenOutAmount = _swap(_tokenIn, _tokenOut, _tokenInAmount, _routerCode, _poolFee, _minAmountSwap, _sqrtPriceLimitX96);
+        TransferHelper.safeApprove(_tokenIn, swapRouterAddress, _tokenInAmount);
+        IUniswapRouter.ExactInputSingleParams memory params = IUniswapRouter.ExactInputSingleParams({
+            tokenIn: _tokenIn,
+            tokenOut: _tokenOut,
+            fee: _poolFee,
+            recipient: _clientAddress,
+            deadline: block.timestamp,
+            amountIn: _tokenInAmount,
+            amountOutMinimum: _minAmountSwap,
+            sqrtPriceLimitX96: _sqrtPriceLimitX96
+        });
+        IUniswapRouter uniswapRouter = IUniswapRouter(swapRouterAddress);
+        uint256 _tokenOutAmount = uniswapRouter.exactInputSingle(params);
 
         TransferHelper.safeTransfer(_tokenOut, proxyAddress, _minAmountSwap);
 
-        return _minAmountSwap;
+        return _tokenOutAmount;
     }
 }
